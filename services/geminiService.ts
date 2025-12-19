@@ -36,34 +36,21 @@ export const getStoreInsights = async (storeData: StoreData): Promise<string> =>
   `;
 
   try {
-    // REST API를 직접 호출하여 v1 API 사용
-    // 사용 가능한 모델: models/gemini-1.5-flash, models/gemini-1.5-pro
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          contents: [{
-            parts: [{
-              text: prompt
-            }]
-          }]
-        })
-      }
-    );
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      console.error('Gemini API HTTP Error:', response.status, errorData);
-      
-      // 404 오류 시 다른 모델 시도
-      if (response.status === 404) {
-        console.log('Trying gemini-1.5-pro instead...');
-        const fallbackResponse = await fetch(
-          `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-pro:generateContent?key=${apiKey}`,
+    // REST API를 직접 호출 - 여러 모델을 순차적으로 시도
+    // 사용 가능한 모델: gemini-1.5-flash-001, gemini-1.5-pro-001, gemini-pro
+    const models = [
+      'gemini-1.5-flash-001',
+      'gemini-1.5-pro-001', 
+      'gemini-pro'
+    ];
+    
+    let lastError: any = null;
+    
+    for (const modelName of models) {
+      try {
+        console.log(`Trying model: ${modelName}`);
+        const response = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`,
           {
             method: 'POST',
             headers: {
@@ -78,33 +65,41 @@ export const getStoreInsights = async (storeData: StoreData): Promise<string> =>
             })
           }
         );
-        
-        if (!fallbackResponse.ok) {
-          throw new Error(`API Error: ${fallbackResponse.status}`);
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          console.warn(`Model ${modelName} failed:`, response.status, errorData);
+          lastError = new Error(`API Error: ${response.status}`);
+          
+          // 404가 아니면 다른 오류이므로 중단
+          if (response.status !== 404) {
+            throw lastError;
+          }
+          
+          // 404면 다음 모델 시도
+          continue;
         }
-        
-        const fallbackData = await fallbackResponse.json();
-        const text = fallbackData.candidates?.[0]?.content?.parts?.[0]?.text;
+
+        const data = await response.json();
+        const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
         
         if (!text) {
-          return "인사이트를 불러올 수 없습니다. 응답이 비어있습니다.";
+          console.warn(`Model ${modelName} returned empty response`, data);
+          continue; // 다음 모델 시도
         }
         
+        console.log(`Success with model: ${modelName}`);
         return text;
+      } catch (error: any) {
+        console.warn(`Model ${modelName} error:`, error);
+        lastError = error;
+        // 다음 모델 시도
+        continue;
       }
-      
-      throw new Error(`API Error: ${response.status}`);
-    }
-
-    const data = await response.json();
-    const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-    
-    if (!text) {
-      console.warn("Gemini API returned empty response", data);
-      return "인사이트를 불러올 수 없습니다. 응답이 비어있습니다.";
     }
     
-    return text;
+    // 모든 모델 실패
+    throw lastError || new Error('All models failed');
   } catch (error: any) {
     console.error("Gemini API Error:", error);
     
