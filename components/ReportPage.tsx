@@ -37,9 +37,31 @@ interface ItemSeasonDataJson {
   total_rows: number;
 }
 
-const ReportPage: React.FC = () => {
+interface ReportPageProps {
+  selectedStoreName?: string;
+}
+
+const ReportPage: React.FC<ReportPageProps> = ({ selectedStoreName }) => {
   const data = itemSeasonDataJson as ItemSeasonDataJson;
   const [selectedMonth, setSelectedMonth] = useState<string>('전체');
+  
+  // 선택한 매장의 데이터만 필터링
+  const storeData = useMemo(() => {
+    if (!selectedStoreName) {
+      return data.data;
+    }
+    // 매장명 매칭 (괄호 안의 이름도 고려)
+    return data.data.filter((item) => {
+      const storeName = item.매장명 || '';
+      // 괄호 안의 이름 추출
+      const match = storeName.match(/\(([^)]+)\)/);
+      if (match) {
+        const nameInBracket = match[1];
+        return nameInBracket === selectedStoreName || storeName.includes(selectedStoreName);
+      }
+      return storeName.includes(selectedStoreName) || selectedStoreName.includes(storeName);
+    });
+  }, [data, selectedStoreName]);
   
   // 월별 필터 옵션 생성
   const monthOptions = useMemo(() => {
@@ -52,20 +74,22 @@ const ReportPage: React.FC = () => {
   
   // 선택된 월에 해당하는 데이터 필터링
   const filteredData = useMemo(() => {
-    if (selectedMonth === '전체') {
-      return data.data;
+    let baseData = storeData;
+    
+    if (selectedMonth !== '전체') {
+      const monthNum = parseInt(selectedMonth.replace('월', ''));
+      const currentYearKey = `2025${String(monthNum).padStart(2, '0')}`;
+      const lastYearKey = `2024${String(monthNum).padStart(2, '0')}`;
+      
+      baseData = storeData.filter((item) => {
+        const currentValue = item[currentYearKey] || 0;
+        const lastValue = item[lastYearKey] || 0;
+        return currentValue > 0 || lastValue > 0;
+      });
     }
     
-    const monthNum = parseInt(selectedMonth.replace('월', ''));
-    const currentYearKey = `2025${String(monthNum).padStart(2, '0')}`;
-    const lastYearKey = `2024${String(monthNum).padStart(2, '0')}`;
-    
-    return data.data.filter((item) => {
-      const currentValue = item[currentYearKey] || 0;
-      const lastValue = item[lastYearKey] || 0;
-      return currentValue > 0 || lastValue > 0;
-    });
-  }, [data, selectedMonth]);
+    return baseData;
+  }, [storeData, selectedMonth]);
 
   // 시즌별 데이터 집계
   const seasonData = useMemo(() => {
@@ -182,6 +206,21 @@ const ReportPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      {/* 선택된 매장 표시 */}
+      {selectedStoreName && (
+        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-3xl p-4 border border-blue-100">
+          <div className="flex items-center gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+            </svg>
+            <div>
+              <p className="text-xs text-blue-600 font-semibold">선택된 매장</p>
+              <p className="text-sm font-bold text-slate-900">{selectedStoreName}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* 월별 필터 */}
       <div className="bg-white rounded-3xl p-4 shadow-sm border border-slate-100">
         <div className="flex items-center justify-between mb-3">

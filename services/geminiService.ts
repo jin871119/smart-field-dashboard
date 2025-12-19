@@ -2,6 +2,7 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { StoreData } from "../types";
 import { generateLocalInsight } from "../utils/localAIInsight";
+import { analyzeItemSeasonData } from "../utils/itemSeasonAnalyzer";
 
 export const getStoreInsights = async (storeData: StoreData): Promise<string> => {
   // Vite에서는 클라이언트 사이드에서 import.meta.env를 사용해야 함
@@ -22,6 +23,9 @@ export const getStoreInsights = async (storeData: StoreData): Promise<string> =>
 
   const genAI = new GoogleGenerativeAI(apiKey);
 
+  // 아이템시즌별판매 데이터 분석
+  const itemSeasonAnalysis = analyzeItemSeasonData(storeData.store.name);
+  
   // 상세한 프롬프트 작성
   const monthlyDetails = storeData.monthlyPerformance
     .map(p => `${p.month}: ${p.revenue}만원 (전년 ${p.target}만원, ${p.growthRate && p.growthRate >= 0 ? '+' : ''}${p.growthRate?.toFixed(1) || 0}%)`)
@@ -33,33 +37,62 @@ export const getStoreInsights = async (storeData: StoreData): Promise<string> =>
     .map(i => `- ${i.name}: ${i.sales}건 판매, ${i.growth >= 0 ? '+' : ''}${i.growth.toFixed(1)}% 성장`)
     .join('\n');
   
-  const prompt = `당신은 소매업체의 현장 관리 전문가입니다. 다음 매장 데이터를 분석하여 실무진이 즉시 활용할 수 있는 구체적이고 실행 가능한 인사이트를 제공해주세요.
+  const prompt = `당신은 소매업체의 현장 관리 전문가이자 데이터 분석가입니다. 다음 매장의 상세 데이터를 심층 분석하여 실무진이 즉시 실행할 수 있는 전략적 인사이트를 제공해주세요.
 
-【매장 정보】
+【매장 기본 정보】
 - 매장명: ${storeData.store.name}
 - 매장 형태: ${storeData.store.category}
 - 위치: ${storeData.store.location}
 - 담당 매니저: ${storeData.store.manager.name} (${storeData.store.manager.position})
+- 매장 평수: ${storeData.store.py || 'N/A'}평
+
+【핵심 성과 지표】
 - 연매출 (1~11월): ${storeData.yearToDateRevenue?.toLocaleString() || 0}만원
 - 전년 대비 신장률: ${storeData.growthRate && storeData.growthRate >= 0 ? '+' : ''}${storeData.growthRate?.toFixed(1) || 0}%
 
-【월별 실적 상세】
+【월별 실적 상세 분석】
 ${monthlyDetails}
 
 【주요 아이템 성과 (상위 5개)】
 ${topItems}
 
-【분석 요청사항】
-1. 매장의 전반적인 성과를 한 문장으로 요약
-2. 가장 주목해야 할 핵심 이슈 1가지 (긍정적이거나 개선 필요)
-3. 즉시 실행 가능한 액션 아이템 1가지
+【시즌별 판매 분석 (백데이터 기반)】
+${itemSeasonAnalysis.시즌별요약}
 
-다음 형식으로 작성해주세요:
-- 간결하고 전문적인 톤
-- 구체적인 수치와 데이터 언급
-- 실행 가능한 제안 포함
-- 이모지 적절히 사용 (최대 3개)
-- 총 250자 내외
+【ITEM별 판매 분석 (백데이터 기반)】
+${itemSeasonAnalysis.ITEM별요약}
+
+【반품 분석】
+${itemSeasonAnalysis.반품분석}
+
+【월별 판매 패턴】
+${itemSeasonAnalysis.월별패턴}
+
+【심층 분석 요청사항】
+다음 4가지 관점에서 분석해주세요:
+
+1. 【성과 요약】매장의 전반적인 성과를 2-3문장으로 요약 (강점과 약점 포함)
+
+2. 【핵심 이슈】가장 주목해야 할 핵심 이슈 1가지
+   - 긍정적 이슈: 성장 동력이 되는 요소
+   - 개선 필요 이슈: 즉시 대응이 필요한 문제점
+   - 구체적인 수치와 데이터를 근거로 제시
+
+3. 【시즌/ITEM 전략】시즌별 및 ITEM별 데이터를 바탕으로 한 전략적 제안
+   - 주력 시즌/ITEM의 활용 방안
+   - 저성과 시즌/ITEM의 개선 방안
+
+4. 【실행 액션】즉시 실행 가능한 구체적인 액션 아이템 2가지
+   - 우선순위가 높은 것부터
+   - 측정 가능한 목표 포함
+
+【작성 형식】
+- 전문적이면서도 이해하기 쉬운 톤
+- 구체적인 수치와 퍼센트 언급 필수
+- 실행 가능하고 측정 가능한 제안
+- 이모지 적절히 사용 (최대 5개)
+- 총 400-500자 내외
+- 각 섹션을 명확히 구분하여 작성
 `;
 
   try {

@@ -107,7 +107,7 @@ const App: React.FC = () => {
           </button>
         </>
       ) : (
-        <ReportPage />
+        <ReportPage selectedStoreName={selectedData?.store.name || ''} />
       )}
     </Layout>
   );
