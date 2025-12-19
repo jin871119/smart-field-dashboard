@@ -29,16 +29,28 @@ export const analyzeItemSeasonData = (storeName: string): {
 } => {
   const data = itemSeasonDataJson as any;
   
-  // 매장명 매칭
+  // 매장명 매칭 (정확한 매칭)
   const storeItems = data.data.filter((item: ItemSeasonData) => {
     const itemStoreName = item.매장명 || '';
+    
+    // 괄호 안의 이름 추출 (예: "29CM(롯데본점)" -> "롯데본점")
     const match = itemStoreName.match(/\(([^)]+)\)/);
     if (match) {
       const nameInBracket = match[1];
-      return nameInBracket === storeName || itemStoreName.includes(storeName);
+      // 괄호 안의 이름과 정확히 일치하거나 포함 관계 확인
+      return nameInBracket === storeName || storeName === nameInBracket;
     }
-    return itemStoreName.includes(storeName) || storeName.includes(itemStoreName);
+    // 괄호가 없으면 직접 매칭 (예: "갤러리아진주" == "갤러리아진주")
+    return itemStoreName === storeName;
   });
+  
+  // 디버깅: 매칭된 데이터 확인
+  if (storeItems.length === 0) {
+    console.warn(`[itemSeasonAnalyzer] 매장 "${storeName}"에 대한 데이터를 찾을 수 없습니다.`);
+    // 매칭 실패 시 빈 데이터 반환
+  } else {
+    console.log(`[itemSeasonAnalyzer] 매장 "${storeName}"에 대한 ${storeItems.length}개 데이터 발견`);
+  }
 
   if (storeItems.length === 0) {
     return {
@@ -94,14 +106,15 @@ export const analyzeItemSeasonData = (storeName: string): {
   const total반품판매액 = Math.abs(storeItems.reduce((sum: number, item: ItemSeasonData) => sum + (item.반품_판매액 || 0), 0));
   const 반품률 = total정상판매액 > 0 ? (total반품판매액 / total정상판매액) * 100 : 0;
 
-  // 월별 패턴 분석 (2025년 데이터)
+  // 월별 패턴 분석 (2025년 데이터, 12월 제외)
   const monthlySales: { [key: string]: number } = {};
-  for (let month = 1; month <= 12; month++) {
+  for (let month = 1; month <= 11; month++) { // 12월 제외
     const monthKey = `2025${String(month).padStart(2, '0')}`;
     monthlySales[`${month}월`] = storeItems.reduce((sum: number, item: ItemSeasonData) => sum + (item[monthKey] || 0), 0);
   }
 
   const peakMonth = Object.entries(monthlySales)
+    .filter(([_, value]) => value > 0) // 0인 월 제외
     .sort((a, b) => b[1] - a[1])[0];
 
   // 시즌별 전년 대비 분석
@@ -112,8 +125,8 @@ export const analyzeItemSeasonData = (storeName: string): {
       seasonGrowth[season] = { 올해: 0, 작년: 0 };
     }
     seasonGrowth[season].올해 += item.정상_판매액 || 0;
-    // 작년 데이터는 월별 데이터에서 집계
-    for (let month = 1; month <= 12; month++) {
+    // 작년 데이터는 월별 데이터에서 집계 (12월 제외)
+    for (let month = 1; month <= 11; month++) { // 12월 제외
       const lastYearKey = `2024${String(month).padStart(2, '0')}`;
       seasonGrowth[season].작년 += item[lastYearKey] || 0;
     }
@@ -138,7 +151,7 @@ export const analyzeItemSeasonData = (storeName: string): {
       itemGrowth[itemCode] = { 올해: 0, 작년: 0 };
     }
     itemGrowth[itemCode].올해 += item.정상_판매액 || 0;
-    for (let month = 1; month <= 12; month++) {
+    for (let month = 1; month <= 11; month++) { // 12월 제외
       const lastYearKey = `2024${String(month).padStart(2, '0')}`;
       itemGrowth[itemCode].작년 += item[lastYearKey] || 0;
     }
@@ -155,12 +168,12 @@ export const analyzeItemSeasonData = (storeName: string): {
   const growingItems = itemGrowthDetails.filter(i => i.growthRate > 0);
   const decliningItems = itemGrowthDetails.filter(i => i.growthRate < 0);
 
-  // 월별 추이 분석 (최근 3개월 vs 전년 동기)
+  // 월별 추이 분석 (최근 3개월 vs 전년 동기, 12월 제외)
   const recentMonths = [];
   const currentMonth = new Date().getMonth() + 1;
   for (let i = 2; i >= 0; i--) {
     const month = currentMonth - i;
-    if (month > 0) {
+    if (month > 0 && month <= 11) { // 12월 제외
       const monthKey = `2025${String(month).padStart(2, '0')}`;
       const lastYearKey = `2024${String(month).padStart(2, '0')}`;
       const current = storeItems.reduce((sum: number, item: ItemSeasonData) => sum + (item[monthKey] || 0), 0);
@@ -174,7 +187,7 @@ export const analyzeItemSeasonData = (storeName: string): {
     시즌별요약: `주요 시즌: ${topSeasons.map(s => `${s.시즌}(${s.판매액}만원)`).join(', ')}`,
     ITEM별요약: `주요 ITEM: ${topItems.map(i => `${i.ITEM}(${i.판매액}만원, ${i.판매수량}건)`).join(', ')}`,
     반품분석: `반품률: ${반품률.toFixed(1)}% (정상판매 ${Math.round(total정상판매액/10000)}만원, 반품 ${Math.round(total반품판매액/10000)}만원)`,
-    월별패턴: `2025년 최고 판매월: ${peakMonth[0]} (${Math.round(peakMonth[1]/10000)}만원)`,
+    월별패턴: peakMonth ? `2025년 최고 판매월: ${peakMonth[0]} (${Math.round(peakMonth[1]/10000)}만원)` : '월별 데이터 없음',
     시즌성장분석: growingSeasons.length > 0 
       ? `성장 시즌: ${growingSeasons.map(s => `${s.시즌}(+${s.growthRate.toFixed(1)}%)`).join(', ')}`
       : '성장하는 시즌 없음',

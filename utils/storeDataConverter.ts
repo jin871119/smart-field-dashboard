@@ -98,7 +98,7 @@ export const convertExcelDataToStoreData = (
     const itemPerformance: ItemPerformance[] = (() => {
       const seasonData = itemSeasonDataJson as any;
       
-      // 매장명 매칭 (백데이터의 매장명 형식: "29CM(롯데본점)" 또는 "갤러리아진주")
+      // 매장명 매칭 (정확한 매칭)
       const storeItems = seasonData.data.filter((item: any) => {
         const itemStoreName = item.매장명 || '';
         const storeName = item.매장명; // 현재 매장명
@@ -107,10 +107,11 @@ export const convertExcelDataToStoreData = (
         const match = itemStoreName.match(/\(([^)]+)\)/);
         if (match) {
           const nameInBracket = match[1];
-          return nameInBracket === storeName || itemStoreName.includes(storeName);
+          // 괄호 안의 이름과 정확히 일치
+          return nameInBracket === storeName || storeName === nameInBracket;
         }
-        // 괄호가 없으면 직접 매칭 (예: "갤러리아진주" == "갤러리아진주")
-        return itemStoreName === storeName || itemStoreName.includes(storeName) || storeName.includes(itemStoreName);
+        // 괄호가 없으면 직접 매칭
+        return itemStoreName === storeName;
       });
 
       if (storeItems.length === 0) {
