@@ -91,7 +91,7 @@ const ReportPage: React.FC<ReportPageProps> = ({ selectedStoreName }) => {
     return baseData;
   }, [storeData, selectedMonth]);
 
-  // 시즌별 데이터 집계
+  // 시즌별 데이터 집계 (월별 필터 적용)
   const seasonData = useMemo(() => {
     const seasonMap: { [key: string]: { 판매액: number; 정상_판매액: number; 판매수량: number } } = {};
 
@@ -100,9 +100,28 @@ const ReportPage: React.FC<ReportPageProps> = ({ selectedStoreName }) => {
       if (!seasonMap[season]) {
         seasonMap[season] = { 판매액: 0, 정상_판매액: 0, 판매수량: 0 };
       }
-      seasonMap[season].판매액 += item.판매액 || 0;
-      seasonMap[season].정상_판매액 += item.정상_판매액 || 0;
-      seasonMap[season].판매수량 += item.판매수량 || 0;
+      
+      if (selectedMonth === '전체') {
+        // 전체 선택 시: 총계 데이터 사용
+        seasonMap[season].판매액 += item.판매액 || 0;
+        seasonMap[season].정상_판매액 += item.정상_판매액 || 0;
+        seasonMap[season].판매수량 += item.판매수량 || 0;
+      } else {
+        // 특정 월 선택 시: 해당 월의 데이터만 사용
+        const monthNum = parseInt(selectedMonth.replace('월', ''));
+        const currentYearKey = `2025${String(monthNum).padStart(2, '0')}`;
+        const lastYearKey = `2024${String(monthNum).padStart(2, '0')}`;
+        
+        const currentMonthValue = item[currentYearKey] || 0;
+        const lastYearMonthValue = item[lastYearKey] || 0;
+        
+        seasonMap[season].판매액 += currentMonthValue;
+        seasonMap[season].정상_판매액 += lastYearMonthValue;
+        // 월별 판매수량은 정확히 계산하기 어려우므로 판매액 기반으로 추정
+        if (item.판매택가 > 0) {
+          seasonMap[season].판매수량 += Math.round(currentMonthValue / (item.판매택가 / item.판매수량 || 1));
+        }
+      }
     });
 
     return Object.entries(seasonMap)
@@ -116,9 +135,9 @@ const ReportPage: React.FC<ReportPageProps> = ({ selectedStoreName }) => {
           : 0
       }))
       .sort((a, b) => b.판매액 - a.판매액);
-  }, [filteredData]);
+  }, [filteredData, selectedMonth]);
 
-  // ITEM별 데이터 집계
+  // ITEM별 데이터 집계 (월별 필터 적용)
   const itemData = useMemo(() => {
     const itemMap: { [key: string]: { 판매액: number; 정상_판매액: number; 판매수량: number } } = {};
 
@@ -127,9 +146,29 @@ const ReportPage: React.FC<ReportPageProps> = ({ selectedStoreName }) => {
       if (!itemMap[itemCode]) {
         itemMap[itemCode] = { 판매액: 0, 정상_판매액: 0, 판매수량: 0 };
       }
-      itemMap[itemCode].판매액 += item.판매액 || 0;
-      itemMap[itemCode].정상_판매액 += item.정상_판매액 || 0;
-      itemMap[itemCode].판매수량 += item.판매수량 || 0;
+      
+      if (selectedMonth === '전체') {
+        // 전체 선택 시: 총계 데이터 사용
+        itemMap[itemCode].판매액 += item.판매액 || 0;
+        itemMap[itemCode].정상_판매액 += item.정상_판매액 || 0;
+        itemMap[itemCode].판매수량 += item.판매수량 || 0;
+      } else {
+        // 특정 월 선택 시: 해당 월의 데이터만 사용
+        const monthNum = parseInt(selectedMonth.replace('월', ''));
+        const currentYearKey = `2025${String(monthNum).padStart(2, '0')}`;
+        const lastYearKey = `2024${String(monthNum).padStart(2, '0')}`;
+        
+        const currentMonthValue = item[currentYearKey] || 0;
+        const lastYearMonthValue = item[lastYearKey] || 0;
+        
+        itemMap[itemCode].판매액 += currentMonthValue;
+        itemMap[itemCode].정상_판매액 += lastYearMonthValue;
+        // 월별 판매수량은 정확히 계산하기 어려우므로 판매액 기반으로 추정
+        if (item.판매택가 > 0 && item.판매수량 > 0) {
+          const avgPrice = item.판매택가 / item.판매수량;
+          itemMap[itemCode].판매수량 += Math.round(currentMonthValue / avgPrice);
+        }
+      }
     });
 
     return Object.entries(itemMap)
@@ -143,7 +182,7 @@ const ReportPage: React.FC<ReportPageProps> = ({ selectedStoreName }) => {
           : 0
       }))
       .sort((a, b) => b.판매액 - a.판매액);
-  }, [filteredData]);
+  }, [filteredData, selectedMonth]);
 
   // 월별 판매액 추이 (2024년과 2025년 비교)
   const monthlyData = useMemo(() => {
