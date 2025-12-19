@@ -39,7 +39,22 @@ export const getStoreInsights = async (storeData: StoreData): Promise<string> =>
   `;
 
   try {
+    // 먼저 사용 가능한 모델 목록 조회
+    try {
+      const modelsResponse = await fetch(
+        `https://generativelanguage.googleapis.com/v1/models?key=${apiKey}`
+      );
+      if (modelsResponse.ok) {
+        const modelsData = await modelsResponse.json();
+        const availableModels = modelsData.models?.map((m: any) => m.name) || [];
+        console.log('Available models from API:', availableModels);
+      }
+    } catch (e) {
+      console.warn('Could not fetch model list:', e);
+    }
+    
     // @google/generative-ai 패키지 사용 - 여러 모델을 순차적으로 시도
+    // 패키지는 내부적으로 올바른 API 버전과 모델 이름을 사용합니다
     const models = [
       'gemini-1.5-flash',
       'gemini-1.5-pro',
@@ -51,7 +66,17 @@ export const getStoreInsights = async (storeData: StoreData): Promise<string> =>
     for (const modelName of models) {
       try {
         console.log(`Trying model: ${modelName}`);
-        const model = genAI.getGenerativeModel({ model: modelName });
+        // API 버전을 명시하지 않고 패키지가 자동으로 처리하도록 함
+        const model = genAI.getGenerativeModel({ 
+          model: modelName,
+          // generationConfig를 추가하여 호환성 향상
+          generationConfig: {
+            temperature: 0.7,
+            topK: 40,
+            topP: 0.95,
+            maxOutputTokens: 1024,
+          }
+        });
         const result = await model.generateContent(prompt);
         const response = await result.response;
         const text = response.text();
@@ -67,8 +92,10 @@ export const getStoreInsights = async (storeData: StoreData): Promise<string> =>
         console.warn(`Model ${modelName} error:`, error);
         lastError = error;
         
-        // 404가 아니면 다른 오류이므로 중단하지 않고 다음 모델 시도
-        if (error?.message?.includes('404') || error?.message?.includes('not found')) {
+        // 404나 not found 오류면 다음 모델 시도
+        if (error?.message?.includes('404') || 
+            error?.message?.includes('not found') ||
+            error?.message?.includes('not supported')) {
           continue; // 다음 모델 시도
         }
         
