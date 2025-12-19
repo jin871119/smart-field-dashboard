@@ -137,7 +137,7 @@ export const convertExcelDataToStoreData = (
         
         // 올해 정상 판매액
         itemMap[itemCode].올해판매액 += item.정상_판매액 || 0;
-        itemMap[itemCode].올해판매수량 += item.정상_판매수량 || 0;
+        itemMap[itemCode].올해판매수량 += item.판매수량 || 0; // E열: 판매수량 사용
         
         // 작년 판매액 (월별 데이터 합계, 12월 제외)
         for (let month = 1; month <= 11; month++) {
