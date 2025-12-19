@@ -132,8 +132,8 @@ export const convertExcelDataToStoreData = (
         itemMap[itemCode].올해판매액 += item.정상_판매액 || 0;
         itemMap[itemCode].올해판매수량 += item.정상_판매수량 || 0;
         
-        // 작년 판매액 (월별 데이터 합계)
-        for (let month = 1; month <= 12; month++) {
+        // 작년 판매액 (월별 데이터 합계, 12월 제외)
+        for (let month = 1; month <= 11; month++) {
           const lastYearKey = `2024${String(month).padStart(2, '0')}`;
           itemMap[itemCode].작년판매액 += item[lastYearKey] || 0;
         }
