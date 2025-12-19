@@ -120,16 +120,20 @@ export const analyzeItemSeasonData = (storeName: string): {
     .filter(([_, value]) => value > 0) // 0인 월 제외
     .sort((a, b) => b[1] - a[1])[0];
 
-  // 시즌별 전년 대비 분석
+  // 시즌별 전년 대비 분석 (25년 1~11월 vs 24년 1~11월)
   const seasonGrowth: { [key: string]: { 올해: number; 작년: number } } = {};
   storeItems.forEach((item: ItemSeasonData) => {
     const season = item.시즌 || '기타';
     if (!seasonGrowth[season]) {
       seasonGrowth[season] = { 올해: 0, 작년: 0 };
     }
-    seasonGrowth[season].올해 += item.정상_판매액 || 0;
-    // 작년 데이터는 월별 데이터에서 집계 (12월 제외)
-    for (let month = 1; month <= 11; month++) { // 12월 제외
+    // 올해 데이터: 25년 1~11월 월별 데이터 합계
+    for (let month = 1; month <= 11; month++) {
+      const currentYearKey = `2025${String(month).padStart(2, '0')}`;
+      seasonGrowth[season].올해 += item[currentYearKey] || 0;
+    }
+    // 작년 데이터: 24년 1~11월 월별 데이터 합계
+    for (let month = 1; month <= 11; month++) {
       const lastYearKey = `2024${String(month).padStart(2, '0')}`;
       seasonGrowth[season].작년 += item[lastYearKey] || 0;
     }
@@ -151,15 +155,20 @@ export const analyzeItemSeasonData = (storeName: string): {
     ? growingSeasons.map(s => `${s.시즌}: 25년 ${s.올해}만원 vs 24년 ${s.작년}만원 = ${s.growthRate >= 0 ? '+' : ''}${s.growthRate.toFixed(1)}%`).join(' | ')
     : '성장하는 시즌 없음';
 
-  // ITEM별 전년 대비 분석
+  // ITEM별 전년 대비 분석 (25년 1~11월 vs 24년 1~11월)
   const itemGrowth: { [key: string]: { 올해: number; 작년: number } } = {};
   storeItems.forEach((item: ItemSeasonData) => {
     const itemCode = item.ITEM || '기타';
     if (!itemGrowth[itemCode]) {
       itemGrowth[itemCode] = { 올해: 0, 작년: 0 };
     }
-    itemGrowth[itemCode].올해 += item.정상_판매액 || 0;
-    for (let month = 1; month <= 11; month++) { // 12월 제외
+    // 올해 데이터: 25년 1~11월 월별 데이터 합계
+    for (let month = 1; month <= 11; month++) {
+      const currentYearKey = `2025${String(month).padStart(2, '0')}`;
+      itemGrowth[itemCode].올해 += item[currentYearKey] || 0;
+    }
+    // 작년 데이터: 24년 1~11월 월별 데이터 합계
+    for (let month = 1; month <= 11; month++) {
       const lastYearKey = `2024${String(month).padStart(2, '0')}`;
       itemGrowth[itemCode].작년 += item[lastYearKey] || 0;
     }
