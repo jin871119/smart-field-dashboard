@@ -65,11 +65,13 @@ ${topItems}
 ${itemSeasonAnalysis.시즌별요약}
 ${itemSeasonAnalysis.시즌성장분석}
 ${itemSeasonAnalysis.시즌감소분석}
+계산 근거: ${itemSeasonAnalysis.시즌성장근거 || '데이터 없음'}
 
 【ITEM별 판매 분석 (백데이터)】
 ${itemSeasonAnalysis.ITEM별요약}
 ${itemSeasonAnalysis.ITEM성장분석}
 ${itemSeasonAnalysis.ITEM감소분석}
+계산 근거: ${itemSeasonAnalysis.ITEM성장근거 || '데이터 없음'}
 
 【반품 분석】
 ${itemSeasonAnalysis.반품분석}

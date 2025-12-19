@@ -27,6 +27,8 @@ export const analyzeItemSeasonData = (storeName: string): {
   반품분석: string;
   월별패턴: string;
   전체신장률?: number; // 올해와 전년 비교 신장률
+  시즌성장근거?: string; // 시즌별 성장률 계산 근거
+  ITEM성장근거?: string; // ITEM별 성장률 계산 근거
 } => {
   const data = itemSeasonDataJson as any;
   
@@ -143,6 +145,11 @@ export const analyzeItemSeasonData = (storeName: string): {
 
   const growingSeasons = seasonGrowthDetails.filter(s => s.growthRate > 0);
   const decliningSeasons = seasonGrowthDetails.filter(s => s.growthRate < 0);
+  
+  // 시즌별 성장률 계산 근거
+  const 시즌성장근거 = growingSeasons.length > 0
+    ? growingSeasons.map(s => `${s.시즌}: 25년 ${s.올해}만원 vs 24년 ${s.작년}만원 = ${s.growthRate >= 0 ? '+' : ''}${s.growthRate.toFixed(1)}%`).join(' | ')
+    : '성장하는 시즌 없음';
 
   // ITEM별 전년 대비 분석
   const itemGrowth: { [key: string]: { 올해: number; 작년: number } } = {};
@@ -168,6 +175,11 @@ export const analyzeItemSeasonData = (storeName: string): {
 
   const growingItems = itemGrowthDetails.filter(i => i.growthRate > 0);
   const decliningItems = itemGrowthDetails.filter(i => i.growthRate < 0);
+  
+  // ITEM별 성장률 계산 근거
+  const ITEM성장근거 = growingItems.length > 0
+    ? growingItems.map(i => `${i.ITEM}: 25년 ${i.올해}만원 vs 24년 ${i.작년}만원 = ${i.growthRate >= 0 ? '+' : ''}${i.growthRate.toFixed(1)}%`).join(' | ')
+    : '성장하는 ITEM 없음';
 
   // 월별 추이 분석 (최근 3개월 vs 전년 동기, 12월 제외)
   const recentMonths = [];

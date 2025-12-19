@@ -73,12 +73,18 @@ export const generateLocalInsight = (storeData: StoreData): string => {
   // 4. 백데이터 기반 시즌/ITEM 분석
   if (itemSeasonAnalysis.시즌성장분석 !== '성장하는 시즌 없음') {
     insights.push(`📈 ${itemSeasonAnalysis.시즌성장분석} - 주력 시즌 강화 필요`);
+    if (itemSeasonAnalysis.시즌성장근거) {
+      insights.push(`   📊 계산 근거: ${itemSeasonAnalysis.시즌성장근거}`);
+    }
   }
   if (itemSeasonAnalysis.시즌감소분석 !== '감소하는 시즌 없음') {
     insights.push(`⚠️ ${itemSeasonAnalysis.시즌감소분석} - 즉시 개선 대응 필요`);
   }
   if (itemSeasonAnalysis.ITEM성장분석 !== '성장하는 ITEM 없음') {
     insights.push(`🎯 ${itemSeasonAnalysis.ITEM성장분석} - 주력 ITEM 확대 검토`);
+    if (itemSeasonAnalysis.ITEM성장근거) {
+      insights.push(`   📊 계산 근거: ${itemSeasonAnalysis.ITEM성장근거}`);
+    }
   }
   if (itemSeasonAnalysis.ITEM감소분석 !== '감소하는 ITEM 없음') {
     insights.push(`🚨 ${itemSeasonAnalysis.ITEM감소분석} - 재고 조정 및 프로모션 필요`);
