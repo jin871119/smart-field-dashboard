@@ -39,12 +39,35 @@ export const getStoreInsights = async (storeData: StoreData): Promise<string> =>
   `;
 
   try {
-    // 사용 가능한 모델: gemini-pro, gemini-1.5-pro, gemini-1.5-flash-latest
-    // v1beta API에서는 gemini-1.5-flash 대신 gemini-1.5-flash-latest 또는 gemini-pro 사용
-    const model = genAI.getGenerativeModel({ model: "gemini-pro" });
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const text = response.text();
+    // 사용 가능한 모델 시도 순서: gemini-1.5-flash-latest, gemini-1.5-pro, gemini-pro
+    let model;
+    let result;
+    let response;
+    let text;
+    
+    // 먼저 gemini-1.5-flash-latest 시도
+    try {
+      model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest" });
+      result = await model.generateContent(prompt);
+      response = await result.response;
+      text = response.text();
+    } catch (flashError: any) {
+      console.warn("gemini-1.5-flash-latest failed, trying gemini-1.5-pro:", flashError);
+      // gemini-1.5-pro로 재시도
+      try {
+        model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
+        result = await model.generateContent(prompt);
+        response = await result.response;
+        text = response.text();
+      } catch (proError: any) {
+        console.warn("gemini-1.5-pro failed, trying gemini-pro:", proError);
+        // 마지막으로 gemini-pro 시도
+        model = genAI.getGenerativeModel({ model: "gemini-pro" });
+        result = await model.generateContent(prompt);
+        response = await result.response;
+        text = response.text();
+      }
+    }
     
     if (!text) {
       console.warn("Gemini API returned empty response");
