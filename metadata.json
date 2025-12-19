@@ -1,0 +1,7 @@
+{
+  "name": "Smart Field Dashboard",
+  "description": "A high-performance, mobile-optimized dashboard for field managers to track store performance, manager details, and sales insights on the go.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
