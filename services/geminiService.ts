@@ -36,21 +36,41 @@ export const getStoreInsights = async (storeData: StoreData): Promise<string> =>
   `;
 
   try {
+    // 먼저 사용 가능한 모델 목록 조회
+    try {
+      const modelsResponse = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`
+      );
+      
+      if (modelsResponse.ok) {
+        const modelsData = await modelsResponse.json();
+        console.log('Available models:', modelsData.models?.map((m: any) => m.name) || []);
+      }
+    } catch (e) {
+      console.warn('Could not fetch model list:', e);
+    }
+    
     // REST API를 직접 호출 - 여러 모델을 순차적으로 시도
-    // 사용 가능한 모델: gemini-1.5-flash-001, gemini-1.5-pro-001, gemini-pro
+    // Google AI Studio에서 사용하는 모델 이름들
     const models = [
-      'gemini-1.5-flash-001',
-      'gemini-1.5-pro-001', 
-      'gemini-pro'
+      'gemini-1.5-flash',
+      'gemini-1.5-pro',
+      'gemini-pro',
+      'models/gemini-1.5-flash',
+      'models/gemini-1.5-pro',
+      'models/gemini-pro'
     ];
     
     let lastError: any = null;
+    let lastErrorData: any = null;
     
     for (const modelName of models) {
       try {
         console.log(`Trying model: ${modelName}`);
-        const response = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`,
+        
+        // v1 API 시도
+        let response = await fetch(
+          `https://generativelanguage.googleapis.com/v1/models/${modelName}:generateContent?key=${apiKey}`,
           {
             method: 'POST',
             headers: {
@@ -66,10 +86,32 @@ export const getStoreInsights = async (storeData: StoreData): Promise<string> =>
           }
         );
 
+        // v1이 실패하면 v1beta 시도
+        if (!response.ok && response.status === 404) {
+          console.log(`v1 failed for ${modelName}, trying v1beta...`);
+          response = await fetch(
+            `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`,
+            {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                contents: [{
+                  parts: [{
+                    text: prompt
+                  }]
+                }]
+              })
+            }
+          );
+        }
+
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({}));
           console.warn(`Model ${modelName} failed:`, response.status, errorData);
           lastError = new Error(`API Error: ${response.status}`);
+          lastErrorData = errorData;
           
           // 404가 아니면 다른 오류이므로 중단
           if (response.status !== 404) {
@@ -98,8 +140,9 @@ export const getStoreInsights = async (storeData: StoreData): Promise<string> =>
       }
     }
     
-    // 모든 모델 실패
-    throw lastError || new Error('All models failed');
+    // 모든 모델 실패 - 상세한 에러 정보 반환
+    console.error('All models failed. Last error:', lastError, 'Last error data:', lastErrorData);
+    throw lastError || new Error(`All models failed. Last error data: ${JSON.stringify(lastErrorData)}`);
   } catch (error: any) {
     console.error("Gemini API Error:", error);
     
