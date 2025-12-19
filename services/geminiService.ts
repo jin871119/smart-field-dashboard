@@ -34,7 +34,7 @@ export const getStoreInsights = async (storeData: StoreData): Promise<string> =>
   const topItems = storeData.itemPerformance
     .sort((a, b) => b.sales - a.sales)
     .slice(0, 5)
-    .map(i => `- ${i.name}: ${i.sales}건 판매, ${i.growth >= 0 ? '+' : ''}${i.growth.toFixed(1)}% 성장`)
+    .map(i => `- ${i.name}: ${i.sales}만원 판매 (25년 1~11월), 전년 대비 ${i.growth >= 0 ? '+' : ''}${i.growth.toFixed(1)}%`)
     .join('\n');
   
   // 매니저 근속연수 계산

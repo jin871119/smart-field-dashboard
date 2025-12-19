@@ -63,7 +63,7 @@ export const generateLocalInsight = (storeData: StoreData): string => {
   
   // 3. 아이템 성과
   if (topItem && topItem.growth > 0) {
-    insights.push(`🎯 ${topItem.name} ${topItem.sales}건 판매, ${topItem.growth.toFixed(1)}% 성장으로 주력 상품 확인`);
+    insights.push(`🎯 ${topItem.name} ${topItem.sales}만원 판매 (25년 1~11월), 전년 대비 ${topItem.growth.toFixed(1)}% 성장으로 주력 상품 확인`);
   } else if (decliningItems.length > 0) {
     insights.push(`⚠️ ${decliningItems.length}개 아이템 하락세. 재고 관리 및 프로모션 검토 필요`);
   } else {

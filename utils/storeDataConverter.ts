@@ -126,20 +126,22 @@ export const convertExcelDataToStoreData = (
         return [];
       }
 
-      // ITEM별 집계 (올해와 작년)
-      const itemMap: { [key: string]: { 올해판매액: number; 작년판매액: number; 올해판매수량: number } } = {};
+      // ITEM별 집계 (25년 1~11월 vs 24년 1~11월)
+      const itemMap: { [key: string]: { 올해판매액: number; 작년판매액: number } } = {};
       
       storeItems.forEach((item: any) => {
         const itemCode = item.ITEM || '기타';
         if (!itemMap[itemCode]) {
-          itemMap[itemCode] = { 올해판매액: 0, 작년판매액: 0, 올해판매수량: 0 };
+          itemMap[itemCode] = { 올해판매액: 0, 작년판매액: 0 };
         }
         
-        // 올해 정상 판매액
-        itemMap[itemCode].올해판매액 += item.정상_판매액 || 0;
-        itemMap[itemCode].올해판매수량 += item.판매수량 || 0; // E열: 판매수량 사용
+        // 올해 판매액 (25년 1~11월) - 월별 데이터 합계
+        for (let month = 1; month <= 11; month++) {
+          const currentYearKey = `2025${String(month).padStart(2, '0')}`;
+          itemMap[itemCode].올해판매액 += item[currentYearKey] || 0;
+        }
         
-        // 작년 판매액 (월별 데이터 합계, 12월 제외)
+        // 작년 판매액 (24년 1~11월) - 월별 데이터 합계
         for (let month = 1; month <= 11; month++) {
           const lastYearKey = `2024${String(month).padStart(2, '0')}`;
           itemMap[itemCode].작년판매액 += item[lastYearKey] || 0;
@@ -148,15 +150,15 @@ export const convertExcelDataToStoreData = (
 
       return Object.entries(itemMap)
         .map(([ITEM, values]) => {
-          const sales = Math.round(values.올해판매수량); // 판매 수량
+          const sales = Math.round(values.올해판매액 / 10000); // 판매금액 (만원)
           const growth = values.작년판매액 > 0
             ? ((values.올해판매액 - values.작년판매액) / values.작년판매액) * 100
             : 0;
           
           return {
             name: ITEM,
-            sales: sales,
-            growth: Math.round(growth * 10) / 10
+            sales: sales, // 판매금액 (만원)
+            growth: Math.round(growth * 10) / 10 // 신장률 (%)
           };
         })
         .sort((a, b) => b.sales - a.sales)

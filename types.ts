@@ -28,8 +28,8 @@ export interface MonthlyPerformance {
 
 export interface ItemPerformance {
   name: string;
-  sales: number;
-  growth: number;
+  sales: number; // 판매금액 (만원)
+  growth: number; // 전년 대비 신장률 (%)
 }
 
 export interface StoreData {
