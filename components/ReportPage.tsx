@@ -91,35 +91,39 @@ const ReportPage: React.FC<ReportPageProps> = ({ selectedStoreName }) => {
     return baseData;
   }, [storeData, selectedMonth]);
 
-  // 시즌별 데이터 집계 (월별 필터 적용)
+  // 시즌별 데이터 집계 (월별 필터 적용, 정상 판매액만, 전년 대비)
   const seasonData = useMemo(() => {
-    const seasonMap: { [key: string]: { 판매액: number; 정상_판매액: number; 판매수량: number } } = {};
+    const seasonMap: { [key: string]: { 올해정상판매액: number; 작년정상판매액: number; 판매수량: number } } = {};
 
     filteredData.forEach((item) => {
       const season = item.시즌 || '기타';
       if (!seasonMap[season]) {
-        seasonMap[season] = { 판매액: 0, 정상_판매액: 0, 판매수량: 0 };
+        seasonMap[season] = { 올해정상판매액: 0, 작년정상판매액: 0, 판매수량: 0 };
       }
       
       if (selectedMonth === '전체') {
-        // 전체 선택 시: 총계 데이터 사용
-        seasonMap[season].판매액 += item.판매액 || 0;
-        seasonMap[season].정상_판매액 += item.정상_판매액 || 0;
-        seasonMap[season].판매수량 += item.판매수량 || 0;
+        // 전체 선택 시: 정상 판매액만 사용
+        seasonMap[season].올해정상판매액 += item.정상_판매액 || 0;
+        // 작년 데이터는 월별 데이터에서 집계 (2024년 데이터)
+        for (let month = 1; month <= 12; month++) {
+          const lastYearKey = `2024${String(month).padStart(2, '0')}`;
+          seasonMap[season].작년정상판매액 += item[lastYearKey] || 0;
+        }
+        seasonMap[season].판매수량 += item.정상_판매수량 || 0;
       } else {
         // 특정 월 선택 시: 해당 월의 데이터만 사용
         const monthNum = parseInt(selectedMonth.replace('월', ''));
         const currentYearKey = `2025${String(monthNum).padStart(2, '0')}`;
         const lastYearKey = `2024${String(monthNum).padStart(2, '0')}`;
         
-        const currentMonthValue = item[currentYearKey] || 0;
-        const lastYearMonthValue = item[lastYearKey] || 0;
-        
-        seasonMap[season].판매액 += currentMonthValue;
-        seasonMap[season].정상_판매액 += lastYearMonthValue;
-        // 월별 판매수량은 정확히 계산하기 어려우므로 판매액 기반으로 추정
-        if (item.판매택가 > 0) {
-          seasonMap[season].판매수량 += Math.round(currentMonthValue / (item.판매택가 / item.판매수량 || 1));
+        // 올해 정상 판매액 (2025년 해당 월)
+        seasonMap[season].올해정상판매액 += item[currentYearKey] || 0;
+        // 작년 정상 판매액 (2024년 해당 월)
+        seasonMap[season].작년정상판매액 += item[lastYearKey] || 0;
+        // 판매수량은 정확히 계산하기 어려우므로 판매액 기반으로 추정
+        if (item.정상_판매택가 > 0 && item.정상_판매수량 > 0) {
+          const avgPrice = item.정상_판매택가 / item.정상_판매수량;
+          seasonMap[season].판매수량 += Math.round((item[currentYearKey] || 0) / avgPrice);
         }
       }
     });
@@ -127,46 +131,49 @@ const ReportPage: React.FC<ReportPageProps> = ({ selectedStoreName }) => {
     return Object.entries(seasonMap)
       .map(([시즌, values]) => ({
         시즌,
-        판매액: Math.round(values.판매액 / 10000), // 만원 단위
-        정상_판매액: Math.round(values.정상_판매액 / 10000),
+        올해: Math.round(values.올해정상판매액 / 10000), // 만원 단위
+        작년: Math.round(values.작년정상판매액 / 10000),
         판매수량: values.판매수량,
-        성장률: values.정상_판매액 > 0
-          ? ((values.판매액 - values.정상_판매액) / values.정상_판매액) * 100
+        성장률: values.작년정상판매액 > 0
+          ? ((values.올해정상판매액 - values.작년정상판매액) / values.작년정상판매액) * 100
           : 0
       }))
-      .sort((a, b) => b.판매액 - a.판매액);
+      .sort((a, b) => b.올해 - a.올해);
   }, [filteredData, selectedMonth]);
 
-  // ITEM별 데이터 집계 (월별 필터 적용)
+  // ITEM별 데이터 집계 (월별 필터 적용, 정상 판매액만, 전년 대비)
   const itemData = useMemo(() => {
-    const itemMap: { [key: string]: { 판매액: number; 정상_판매액: number; 판매수량: number } } = {};
+    const itemMap: { [key: string]: { 올해정상판매액: number; 작년정상판매액: number; 판매수량: number } } = {};
 
     filteredData.forEach((item) => {
       const itemCode = item.ITEM || '기타';
       if (!itemMap[itemCode]) {
-        itemMap[itemCode] = { 판매액: 0, 정상_판매액: 0, 판매수량: 0 };
+        itemMap[itemCode] = { 올해정상판매액: 0, 작년정상판매액: 0, 판매수량: 0 };
       }
       
       if (selectedMonth === '전체') {
-        // 전체 선택 시: 총계 데이터 사용
-        itemMap[itemCode].판매액 += item.판매액 || 0;
-        itemMap[itemCode].정상_판매액 += item.정상_판매액 || 0;
-        itemMap[itemCode].판매수량 += item.판매수량 || 0;
+        // 전체 선택 시: 정상 판매액만 사용
+        itemMap[itemCode].올해정상판매액 += item.정상_판매액 || 0;
+        // 작년 데이터는 월별 데이터에서 집계 (2024년 데이터)
+        for (let month = 1; month <= 12; month++) {
+          const lastYearKey = `2024${String(month).padStart(2, '0')}`;
+          itemMap[itemCode].작년정상판매액 += item[lastYearKey] || 0;
+        }
+        itemMap[itemCode].판매수량 += item.정상_판매수량 || 0;
       } else {
         // 특정 월 선택 시: 해당 월의 데이터만 사용
         const monthNum = parseInt(selectedMonth.replace('월', ''));
         const currentYearKey = `2025${String(monthNum).padStart(2, '0')}`;
         const lastYearKey = `2024${String(monthNum).padStart(2, '0')}`;
         
-        const currentMonthValue = item[currentYearKey] || 0;
-        const lastYearMonthValue = item[lastYearKey] || 0;
-        
-        itemMap[itemCode].판매액 += currentMonthValue;
-        itemMap[itemCode].정상_판매액 += lastYearMonthValue;
-        // 월별 판매수량은 정확히 계산하기 어려우므로 판매액 기반으로 추정
-        if (item.판매택가 > 0 && item.판매수량 > 0) {
-          const avgPrice = item.판매택가 / item.판매수량;
-          itemMap[itemCode].판매수량 += Math.round(currentMonthValue / avgPrice);
+        // 올해 정상 판매액 (2025년 해당 월)
+        itemMap[itemCode].올해정상판매액 += item[currentYearKey] || 0;
+        // 작년 정상 판매액 (2024년 해당 월)
+        itemMap[itemCode].작년정상판매액 += item[lastYearKey] || 0;
+        // 판매수량은 정확히 계산하기 어려우므로 판매액 기반으로 추정
+        if (item.정상_판매택가 > 0 && item.정상_판매수량 > 0) {
+          const avgPrice = item.정상_판매택가 / item.정상_판매수량;
+          itemMap[itemCode].판매수량 += Math.round((item[currentYearKey] || 0) / avgPrice);
         }
       }
     });
@@ -174,14 +181,14 @@ const ReportPage: React.FC<ReportPageProps> = ({ selectedStoreName }) => {
     return Object.entries(itemMap)
       .map(([ITEM, values]) => ({
         ITEM,
-        판매액: Math.round(values.판매액 / 10000),
-        정상_판매액: Math.round(values.정상_판매액 / 10000),
+        올해: Math.round(values.올해정상판매액 / 10000),
+        작년: Math.round(values.작년정상판매액 / 10000),
         판매수량: values.판매수량,
-        성장률: values.정상_판매액 > 0
-          ? ((values.판매액 - values.정상_판매액) / values.정상_판매액) * 100
+        성장률: values.작년정상판매액 > 0
+          ? ((values.올해정상판매액 - values.작년정상판매액) / values.작년정상판매액) * 100
           : 0
       }))
-      .sort((a, b) => b.판매액 - a.판매액);
+      .sort((a, b) => b.올해 - a.올해);
   }, [filteredData, selectedMonth]);
 
   // 월별 판매액 추이 (2024년과 2025년 비교)
@@ -297,8 +304,8 @@ const ReportPage: React.FC<ReportPageProps> = ({ selectedStoreName }) => {
               <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8' }} />
               <Tooltip content={<CustomTooltip />} />
               <Legend />
-              <Bar dataKey="판매액" fill="#2563eb" radius={[4, 4, 0, 0]} name="총 판매액 (만원)" />
-              <Bar dataKey="정상_판매액" fill="#94a3b8" radius={[4, 4, 0, 0]} name="정상 판매액 (만원)" />
+              <Bar dataKey="올해" fill="#2563eb" radius={[4, 4, 0, 0]} name="2025년 정상 판매액 (만원)" />
+              <Bar dataKey="작년" fill="#94a3b8" radius={[4, 4, 0, 0]} name="2024년 정상 판매액 (만원)" />
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -318,8 +325,8 @@ const ReportPage: React.FC<ReportPageProps> = ({ selectedStoreName }) => {
               <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8' }} />
               <Tooltip content={<CustomTooltip />} />
               <Legend />
-              <Bar dataKey="판매액" fill="#f97316" radius={[4, 4, 0, 0]} name="총 판매액 (만원)" />
-              <Bar dataKey="정상_판매액" fill="#cbd5e1" radius={[4, 4, 0, 0]} name="정상 판매액 (만원)" />
+              <Bar dataKey="올해" fill="#f97316" radius={[4, 4, 0, 0]} name="2025년 정상 판매액 (만원)" />
+              <Bar dataKey="작년" fill="#cbd5e1" radius={[4, 4, 0, 0]} name="2024년 정상 판매액 (만원)" />
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -365,10 +372,13 @@ const ReportPage: React.FC<ReportPageProps> = ({ selectedStoreName }) => {
                 </div>
               </div>
               <div className="text-right">
-                <p className="text-sm font-bold text-slate-900">{season.판매액.toLocaleString()}만원</p>
-                <p className={`text-[10px] font-bold ${season.성장률 >= 0 ? 'text-green-500' : 'text-red-400'}`}>
-                  {season.성장률 >= 0 ? '+' : ''}{season.성장률.toFixed(1)}%
-                </p>
+                <p className="text-sm font-bold text-slate-900">{season.올해.toLocaleString()}만원</p>
+                <div className="flex items-center gap-2">
+                  <p className="text-[10px] text-slate-500">작년: {season.작년.toLocaleString()}만원</p>
+                  <p className={`text-[10px] font-bold ${season.성장률 >= 0 ? 'text-green-500' : 'text-red-400'}`}>
+                    {season.성장률 >= 0 ? '+' : ''}{season.성장률.toFixed(1)}%
+                  </p>
+                </div>
               </div>
             </div>
           ))}
