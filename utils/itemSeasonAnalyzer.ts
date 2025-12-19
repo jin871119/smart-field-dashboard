@@ -213,7 +213,10 @@ export const analyzeItemSeasonData = (storeName: string): {
     ITEM감소분석: decliningItems.length > 0
       ? `감소 ITEM: ${decliningItems.map(i => `${i.ITEM}(${i.growthRate.toFixed(1)}%)`).join(', ')}`
       : '감소하는 ITEM 없음',
-    최근3개월추이: recentMonths.map(m => `${m.month}: ${m.current}만원 (전년 ${m.lastYear}만원, ${m.growth >= 0 ? '+' : ''}${m.growth.toFixed(1)}%)`).join(' | ')
+    최근3개월추이: recentMonths.map(m => `${m.month}: ${m.current}만원 (전년 ${m.lastYear}만원, ${m.growth >= 0 ? '+' : ''}${m.growth.toFixed(1)}%)`).join(' | '),
+    전체신장률: Math.round(전체신장률 * 10) / 10,
+    시즌성장근거: 시즌성장근거,
+    ITEM성장근거: ITEM성장근거
   };
 };
 
