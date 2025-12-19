@@ -1,5 +1,6 @@
 import { StoreData, Store, Manager, MonthlyPerformance, ItemPerformance } from '../types';
 import { processPerformanceData } from './performanceConverter';
+import itemSeasonDataJson from '../item_season_data.json';
 
 // JSON 파일을 동적으로 import하기 위한 타입
 interface ExcelStoreData {
@@ -93,13 +94,62 @@ export const convertExcelDataToStoreData = (
       ];
     }
     
-    const itemPerformance: ItemPerformance[] = [
-      { name: "프리미엄 후디", sales: Math.floor(Math.random() * 1000) + 500, growth: Math.random() * 30 - 5 },
-      { name: "캔버스 스니커즈", sales: Math.floor(Math.random() * 800) + 400, growth: Math.random() * 30 - 5 },
-      { name: "슬림핏 슬랙스", sales: Math.floor(Math.random() * 1500) + 800, growth: Math.random() * 30 - 5 },
-      { name: "린넨 셔츠", sales: Math.floor(Math.random() * 1200) + 600, growth: Math.random() * 30 - 5 },
-      { name: "볼캡 모자", sales: Math.floor(Math.random() * 500) + 200, growth: Math.random() * 30 - 5 }
-    ];
+    // 백데이터에서 실제 ITEM별 판매 데이터 추출
+    const itemPerformance: ItemPerformance[] = (() => {
+      const seasonData = itemSeasonDataJson as any;
+      
+      // 매장명 매칭
+      const storeItems = seasonData.data.filter((item: any) => {
+        const itemStoreName = item.매장명 || '';
+        const match = itemStoreName.match(/\(([^)]+)\)/);
+        if (match) {
+          const nameInBracket = match[1];
+          return nameInBracket === item.매장명 || itemStoreName.includes(item.매장명);
+        }
+        return itemStoreName.includes(item.매장명) || item.매장명.includes(itemStoreName);
+      });
+
+      if (storeItems.length === 0) {
+        // 데이터가 없으면 빈 배열 반환
+        return [];
+      }
+
+      // ITEM별 집계 (올해와 작년)
+      const itemMap: { [key: string]: { 올해판매액: number; 작년판매액: number; 올해판매수량: number } } = {};
+      
+      storeItems.forEach((item: any) => {
+        const itemCode = item.ITEM || '기타';
+        if (!itemMap[itemCode]) {
+          itemMap[itemCode] = { 올해판매액: 0, 작년판매액: 0, 올해판매수량: 0 };
+        }
+        
+        // 올해 정상 판매액
+        itemMap[itemCode].올해판매액 += item.정상_판매액 || 0;
+        itemMap[itemCode].올해판매수량 += item.정상_판매수량 || 0;
+        
+        // 작년 판매액 (월별 데이터 합계)
+        for (let month = 1; month <= 12; month++) {
+          const lastYearKey = `2024${String(month).padStart(2, '0')}`;
+          itemMap[itemCode].작년판매액 += item[lastYearKey] || 0;
+        }
+      });
+
+      return Object.entries(itemMap)
+        .map(([ITEM, values]) => {
+          const sales = Math.round(values.올해판매수량); // 판매 수량
+          const growth = values.작년판매액 > 0
+            ? ((values.올해판매액 - values.작년판매액) / values.작년판매액) * 100
+            : 0;
+          
+          return {
+            name: ITEM,
+            sales: sales,
+            growth: Math.round(growth * 10) / 10
+          };
+        })
+        .sort((a, b) => b.sales - a.sales)
+        .slice(0, 10); // 상위 10개만
+    })();
     
     return {
       store,
