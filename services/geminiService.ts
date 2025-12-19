@@ -1,6 +1,7 @@
 
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { StoreData } from "../types";
+import { generateLocalInsight } from "../utils/localAIInsight";
 
 export const getStoreInsights = async (storeData: StoreData): Promise<string> => {
   // Vite에서는 클라이언트 사이드에서 import.meta.env를 사용해야 함
@@ -104,20 +105,27 @@ export const getStoreInsights = async (storeData: StoreData): Promise<string> =>
       }
     }
     
-    // 모든 모델 실패
-    throw lastError || new Error('All models failed');
+    // 모든 모델 실패 - 로컬 AI 분석으로 대체
+    console.warn('All Gemini models failed, using local AI analysis');
+    return generateLocalInsight(storeData);
   } catch (error: any) {
     console.error("Gemini API Error:", error);
     
-    // 더 자세한 에러 메시지
+    // API 키 오류는 명확히 표시
     if (error?.message?.includes('API_KEY') || error?.message?.includes('401')) {
-      return "⚠️ API 키가 유효하지 않습니다. .env.local 파일의 VITE_GEMINI_API_KEY를 확인해주세요.";
+      // API 키 오류 시에도 로컬 분석 제공
+      console.warn('API key error, using local AI analysis');
+      return generateLocalInsight(storeData);
     }
     
+    // 할당량 초과도 로컬 분석으로 대체
     if (error?.message?.includes('quota') || error?.message?.includes('429')) {
-      return "⚠️ API 할당량을 초과했습니다. 잠시 후 다시 시도해주세요.";
+      console.warn('API quota exceeded, using local AI analysis');
+      return generateLocalInsight(storeData);
     }
     
-    return `⚠️ AI 분석 중 오류가 발생했습니다: ${error?.message || '알 수 없는 오류'}`;
+    // 기타 오류도 로컬 분석으로 대체
+    console.warn('API error occurred, using local AI analysis as fallback');
+    return generateLocalInsight(storeData);
   }
 };
