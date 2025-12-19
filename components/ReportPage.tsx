@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   ResponsiveContainer,
   BarChart,
@@ -39,12 +39,39 @@ interface ItemSeasonDataJson {
 
 const ReportPage: React.FC = () => {
   const data = itemSeasonDataJson as ItemSeasonDataJson;
+  const [selectedMonth, setSelectedMonth] = useState<string>('전체');
+  
+  // 월별 필터 옵션 생성
+  const monthOptions = useMemo(() => {
+    const months = ['전체'];
+    for (let month = 1; month <= 12; month++) {
+      months.push(`${month}월`);
+    }
+    return months;
+  }, []);
+  
+  // 선택된 월에 해당하는 데이터 필터링
+  const filteredData = useMemo(() => {
+    if (selectedMonth === '전체') {
+      return data.data;
+    }
+    
+    const monthNum = parseInt(selectedMonth.replace('월', ''));
+    const currentYearKey = `2025${String(monthNum).padStart(2, '0')}`;
+    const lastYearKey = `2024${String(monthNum).padStart(2, '0')}`;
+    
+    return data.data.filter((item) => {
+      const currentValue = item[currentYearKey] || 0;
+      const lastValue = item[lastYearKey] || 0;
+      return currentValue > 0 || lastValue > 0;
+    });
+  }, [data, selectedMonth]);
 
   // 시즌별 데이터 집계
   const seasonData = useMemo(() => {
     const seasonMap: { [key: string]: { 판매액: number; 정상_판매액: number; 판매수량: number } } = {};
 
-    data.data.forEach((item) => {
+    filteredData.forEach((item) => {
       const season = item.시즌 || '기타';
       if (!seasonMap[season]) {
         seasonMap[season] = { 판매액: 0, 정상_판매액: 0, 판매수량: 0 };
@@ -71,7 +98,7 @@ const ReportPage: React.FC = () => {
   const itemData = useMemo(() => {
     const itemMap: { [key: string]: { 판매액: number; 정상_판매액: number; 판매수량: number } } = {};
 
-    data.data.forEach((item) => {
+    filteredData.forEach((item) => {
       const itemCode = item.ITEM || '기타';
       if (!itemMap[itemCode]) {
         itemMap[itemCode] = { 판매액: 0, 정상_판매액: 0, 판매수량: 0 };
@@ -92,13 +119,13 @@ const ReportPage: React.FC = () => {
           : 0
       }))
       .sort((a, b) => b.판매액 - a.판매액);
-  }, [data]);
+  }, [filteredData]);
 
   // 월별 판매액 추이 (2024년과 2025년 비교)
   const monthlyData = useMemo(() => {
     const monthlyMap: { [key: string]: { current: number; lastYear: number } } = {};
 
-    data.data.forEach((item) => {
+    filteredData.forEach((item) => {
       // 2025년 데이터 (202501 ~ 202512)
       for (let month = 1; month <= 12; month++) {
         const monthKey = `2025${String(month).padStart(2, '0')}`;
@@ -135,7 +162,7 @@ const ReportPage: React.FC = () => {
         const monthB = parseInt(b.월);
         return monthA - monthB;
       });
-  }, [data]);
+  }, [filteredData]);
 
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
@@ -155,6 +182,29 @@ const ReportPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      {/* 월별 필터 */}
+      <div className="bg-white rounded-3xl p-4 shadow-sm border border-slate-100">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-sm font-bold text-slate-900">월별 필터</h3>
+          <span className="text-xs text-slate-500">{filteredData.length}개 데이터</span>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {monthOptions.map((month) => (
+            <button
+              key={month}
+              onClick={() => setSelectedMonth(month)}
+              className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all ${
+                selectedMonth === month
+                  ? 'bg-blue-600 text-white shadow-md'
+                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              }`}
+            >
+              {month}
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* 시즌별 판매 현황 */}
       <div className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100">
         <h3 className="text-sm font-bold text-slate-900 mb-4 flex items-center gap-2">
