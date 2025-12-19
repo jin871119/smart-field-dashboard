@@ -17,7 +17,9 @@ const AIInsightCard: React.FC<AIInsightCardProps> = ({ data }) => {
       const result = await getStoreInsights(data);
       setInsight(result);
     } catch (e) {
-      setInsight("인사이트를 가져오는데 실패했습니다.");
+      console.error('AI Insight Error:', e);
+      const errorMessage = e instanceof Error ? e.message : String(e);
+      setInsight(`⚠️ 인사이트를 가져오는데 실패했습니다: ${errorMessage}`);
     } finally {
       setLoading(false);
     }

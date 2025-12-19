@@ -6,8 +6,16 @@ export const getStoreInsights = async (storeData: StoreData): Promise<string> =>
   // Vite에서는 클라이언트 사이드에서 import.meta.env를 사용해야 함
   const apiKey = import.meta.env.VITE_GEMINI_API_KEY || import.meta.env.GEMINI_API_KEY || '';
   
+  // 디버깅: 환경 변수 확인
+  console.log('API Key check:', {
+    hasViteKey: !!import.meta.env.VITE_GEMINI_API_KEY,
+    hasKey: !!import.meta.env.GEMINI_API_KEY,
+    keyLength: apiKey.length,
+    envKeys: Object.keys(import.meta.env).filter(k => k.includes('GEMINI'))
+  });
+  
   if (!apiKey) {
-    return "⚠️ Gemini API 키가 설정되지 않았습니다. .env.local 파일에 VITE_GEMINI_API_KEY를 설정해주세요.";
+    return "⚠️ Gemini API 키가 설정되지 않았습니다. .env.local 파일에 VITE_GEMINI_API_KEY를 설정하고 개발 서버를 재시작해주세요.";
   }
 
   const ai = new GoogleGenAI({ apiKey });
@@ -34,9 +42,26 @@ export const getStoreInsights = async (storeData: StoreData): Promise<string> =>
     const model = ai.getGenerativeModel({ model: "gemini-1.5-flash" });
     const result = await model.generateContent(prompt);
     const response = await result.response;
-    return response.text() || "인사이트를 불러올 수 없습니다.";
-  } catch (error) {
+    const text = response.text();
+    
+    if (!text) {
+      console.warn("Gemini API returned empty response");
+      return "인사이트를 불러올 수 없습니다. 응답이 비어있습니다.";
+    }
+    
+    return text;
+  } catch (error: any) {
     console.error("Gemini API Error:", error);
-    return "AI 분석 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.";
+    
+    // 더 자세한 에러 메시지
+    if (error?.message?.includes('API_KEY')) {
+      return "⚠️ API 키가 유효하지 않습니다. .env.local 파일의 VITE_GEMINI_API_KEY를 확인해주세요.";
+    }
+    
+    if (error?.message?.includes('quota') || error?.message?.includes('429')) {
+      return "⚠️ API 할당량을 초과했습니다. 잠시 후 다시 시도해주세요.";
+    }
+    
+    return `⚠️ AI 분석 중 오류가 발생했습니다: ${error?.message || '알 수 없는 오류'}`;
   }
 };
