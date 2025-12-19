@@ -97,22 +97,29 @@ export const convertExcelDataToStoreData = (
     // 백데이터에서 실제 ITEM별 판매 데이터 추출
     const itemPerformance: ItemPerformance[] = (() => {
       const seasonData = itemSeasonDataJson as any;
+      const currentStoreName = item.매장명; // 현재 처리 중인 매장명 (예: "롯데본점")
       
       // 매장명 매칭 (정확한 매칭)
-      const storeItems = seasonData.data.filter((item: any) => {
-        const itemStoreName = item.매장명 || '';
-        const storeName = item.매장명; // 현재 매장명
+      const storeItems = seasonData.data.filter((seasonItem: any) => {
+        const itemStoreName = seasonItem.매장명 || '';
         
         // 괄호 안의 이름 추출 (예: "29CM(롯데본점)" -> "롯데본점")
         const match = itemStoreName.match(/\(([^)]+)\)/);
         if (match) {
           const nameInBracket = match[1];
-          // 괄호 안의 이름과 정확히 일치
-          return nameInBracket === storeName || storeName === nameInBracket;
+          // 괄호 안의 이름과 현재 매장명이 정확히 일치
+          return nameInBracket === currentStoreName;
         }
-        // 괄호가 없으면 직접 매칭
-        return itemStoreName === storeName;
+        // 괄호가 없으면 직접 매칭 (예: "갤러리아진주" == "갤러리아진주")
+        return itemStoreName === currentStoreName;
       });
+      
+      // 디버깅: 매칭된 데이터 확인
+      if (storeItems.length === 0) {
+        console.warn(`[storeDataConverter] 매장 "${currentStoreName}"에 대한 ITEM 데이터를 찾을 수 없습니다.`);
+      } else {
+        console.log(`[storeDataConverter] 매장 "${currentStoreName}"에 대한 ${storeItems.length}개 ITEM 데이터 발견`);
+      }
 
       if (storeItems.length === 0) {
         // 데이터가 없으면 빈 배열 반환
