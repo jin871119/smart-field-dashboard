@@ -205,6 +205,17 @@ export const analyzeItemSeasonData = (storeName: string): {
     }
   }
 
+  // 전체 신장률 계산 (25년 1~11월 vs 24년 1~11월)
+  let total올해 = 0;
+  let total작년 = 0;
+  for (let month = 1; month <= 11; month++) {
+    const currentYearKey = `2025${String(month).padStart(2, '0')}`;
+    const lastYearKey = `2024${String(month).padStart(2, '0')}`;
+    total올해 += storeItems.reduce((sum: number, item: ItemSeasonData) => sum + (item[currentYearKey] || 0), 0);
+    total작년 += storeItems.reduce((sum: number, item: ItemSeasonData) => sum + (item[lastYearKey] || 0), 0);
+  }
+  const 전체신장률 = total작년 > 0 ? ((total올해 - total작년) / total작년) * 100 : 0;
+
   return {
     시즌별요약: `주요 시즌: ${topSeasons.map(s => `${s.시즌}(${s.판매액}만원)`).join(', ')}`,
     ITEM별요약: `주요 ITEM: ${topItems.map(i => `${i.ITEM}(${i.판매액}만원, ${i.판매수량}건)`).join(', ')}`,
