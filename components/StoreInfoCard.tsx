@@ -41,11 +41,6 @@ const StoreInfoCard: React.FC<StoreInfoCardProps> = ({ store }) => {
       </div>
 
       <div className="border-t border-slate-50 pt-4 flex items-center gap-4">
-        <img 
-          src={store.manager.avatar} 
-          alt={store.manager.name}
-          className="w-12 h-12 rounded-2xl object-cover shadow-inner bg-slate-200"
-        />
         <div className="flex-1">
           <p className="text-xs text-slate-500 font-medium">{store.manager.position}</p>
           <p className="text-sm font-bold text-slate-900">{store.manager.name}</p>

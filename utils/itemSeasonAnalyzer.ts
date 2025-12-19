@@ -26,6 +26,7 @@ export const analyzeItemSeasonData = (storeName: string): {
   ITEM별요약: string;
   반품분석: string;
   월별패턴: string;
+  전체신장률?: number; // 올해와 전년 비교 신장률
 } => {
   const data = itemSeasonDataJson as any;
   

@@ -7,6 +7,7 @@ import PerformanceCharts from './components/PerformanceCharts';
 import AIInsightCard from './components/AIInsightCard';
 import ReportPage from './components/ReportPage';
 import { convertExcelDataToStoreData } from './utils/storeDataConverter';
+import { analyzeItemSeasonData } from './utils/itemSeasonAnalyzer';
 import storeDataJson from './store_data.json';
 import performanceDataJson from './performance_data.json';
 
@@ -37,10 +38,12 @@ const App: React.FC = () => {
     return selectedData.yearToDateRevenue || 0;
   }, [selectedData]);
 
-  // 전년 대비 신장률
+  // 전년 대비 신장률 (백데이터 기반)
   const growthRate = useMemo(() => {
     if (!selectedData) return 0;
-    return selectedData.growthRate || 0;
+    // 백데이터에서 계산한 신장률 사용
+    const itemSeasonAnalysis = analyzeItemSeasonData(selectedData.store.name);
+    return itemSeasonAnalysis.전체신장률 !== undefined ? itemSeasonAnalysis.전체신장률 : (selectedData.growthRate || 0);
   }, [selectedData]);
 
   return (
