@@ -104,11 +104,90 @@ export const analyzeItemSeasonData = (storeName: string): {
   const peakMonth = Object.entries(monthlySales)
     .sort((a, b) => b[1] - a[1])[0];
 
+  // 시즌별 전년 대비 분석
+  const seasonGrowth: { [key: string]: { 올해: number; 작년: number } } = {};
+  storeItems.forEach((item: ItemSeasonData) => {
+    const season = item.시즌 || '기타';
+    if (!seasonGrowth[season]) {
+      seasonGrowth[season] = { 올해: 0, 작년: 0 };
+    }
+    seasonGrowth[season].올해 += item.정상_판매액 || 0;
+    // 작년 데이터는 월별 데이터에서 집계
+    for (let month = 1; month <= 12; month++) {
+      const lastYearKey = `2024${String(month).padStart(2, '0')}`;
+      seasonGrowth[season].작년 += item[lastYearKey] || 0;
+    }
+  });
+
+  const seasonGrowthDetails = Object.entries(seasonGrowth)
+    .map(([시즌, values]) => {
+      const growthRate = values.작년 > 0 ? ((values.올해 - values.작년) / values.작년) * 100 : 0;
+      return { 시즌, 올해: Math.round(values.올해/10000), 작년: Math.round(values.작년/10000), growthRate };
+    })
+    .sort((a, b) => b.올해 - a.올해)
+    .slice(0, 5);
+
+  const growingSeasons = seasonGrowthDetails.filter(s => s.growthRate > 0);
+  const decliningSeasons = seasonGrowthDetails.filter(s => s.growthRate < 0);
+
+  // ITEM별 전년 대비 분석
+  const itemGrowth: { [key: string]: { 올해: number; 작년: number } } = {};
+  storeItems.forEach((item: ItemSeasonData) => {
+    const itemCode = item.ITEM || '기타';
+    if (!itemGrowth[itemCode]) {
+      itemGrowth[itemCode] = { 올해: 0, 작년: 0 };
+    }
+    itemGrowth[itemCode].올해 += item.정상_판매액 || 0;
+    for (let month = 1; month <= 12; month++) {
+      const lastYearKey = `2024${String(month).padStart(2, '0')}`;
+      itemGrowth[itemCode].작년 += item[lastYearKey] || 0;
+    }
+  });
+
+  const itemGrowthDetails = Object.entries(itemGrowth)
+    .map(([ITEM, values]) => {
+      const growthRate = values.작년 > 0 ? ((values.올해 - values.작년) / values.작년) * 100 : 0;
+      return { ITEM, 올해: Math.round(values.올해/10000), 작년: Math.round(values.작년/10000), growthRate };
+    })
+    .sort((a, b) => b.올해 - a.올해)
+    .slice(0, 5);
+
+  const growingItems = itemGrowthDetails.filter(i => i.growthRate > 0);
+  const decliningItems = itemGrowthDetails.filter(i => i.growthRate < 0);
+
+  // 월별 추이 분석 (최근 3개월 vs 전년 동기)
+  const recentMonths = [];
+  const currentMonth = new Date().getMonth() + 1;
+  for (let i = 2; i >= 0; i--) {
+    const month = currentMonth - i;
+    if (month > 0) {
+      const monthKey = `2025${String(month).padStart(2, '0')}`;
+      const lastYearKey = `2024${String(month).padStart(2, '0')}`;
+      const current = storeItems.reduce((sum: number, item: ItemSeasonData) => sum + (item[monthKey] || 0), 0);
+      const lastYear = storeItems.reduce((sum: number, item: ItemSeasonData) => sum + (item[lastYearKey] || 0), 0);
+      const growth = lastYear > 0 ? ((current - lastYear) / lastYear) * 100 : 0;
+      recentMonths.push({ month: `${month}월`, current: Math.round(current/10000), lastYear: Math.round(lastYear/10000), growth });
+    }
+  }
+
   return {
     시즌별요약: `주요 시즌: ${topSeasons.map(s => `${s.시즌}(${s.판매액}만원)`).join(', ')}`,
     ITEM별요약: `주요 ITEM: ${topItems.map(i => `${i.ITEM}(${i.판매액}만원, ${i.판매수량}건)`).join(', ')}`,
     반품분석: `반품률: ${반품률.toFixed(1)}% (정상판매 ${Math.round(total정상판매액/10000)}만원, 반품 ${Math.round(total반품판매액/10000)}만원)`,
-    월별패턴: `2025년 최고 판매월: ${peakMonth[0]} (${Math.round(peakMonth[1]/10000)}만원)`
+    월별패턴: `2025년 최고 판매월: ${peakMonth[0]} (${Math.round(peakMonth[1]/10000)}만원)`,
+    시즌성장분석: growingSeasons.length > 0 
+      ? `성장 시즌: ${growingSeasons.map(s => `${s.시즌}(+${s.growthRate.toFixed(1)}%)`).join(', ')}`
+      : '성장하는 시즌 없음',
+    시즌감소분석: decliningSeasons.length > 0
+      ? `감소 시즌: ${decliningSeasons.map(s => `${s.시즌}(${s.growthRate.toFixed(1)}%)`).join(', ')}`
+      : '감소하는 시즌 없음',
+    ITEM성장분석: growingItems.length > 0
+      ? `성장 ITEM: ${growingItems.map(i => `${i.ITEM}(+${i.growthRate.toFixed(1)}%)`).join(', ')}`
+      : '성장하는 ITEM 없음',
+    ITEM감소분석: decliningItems.length > 0
+      ? `감소 ITEM: ${decliningItems.map(i => `${i.ITEM}(${i.growthRate.toFixed(1)}%)`).join(', ')}`
+      : '감소하는 ITEM 없음',
+    최근3개월추이: recentMonths.map(m => `${m.month}: ${m.current}만원 (전년 ${m.lastYear}만원, ${m.growth >= 0 ? '+' : ''}${m.growth.toFixed(1)}%)`).join(' | ')
   };
 };
 

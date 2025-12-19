@@ -37,30 +37,39 @@ export const getStoreInsights = async (storeData: StoreData): Promise<string> =>
     .map(i => `- ${i.name}: ${i.sales}건 판매, ${i.growth >= 0 ? '+' : ''}${i.growth.toFixed(1)}% 성장`)
     .join('\n');
   
+  // 매니저 근속연수 계산
+  const managerYears = storeData.store.manager.startDate 
+    ? new Date().getFullYear() - parseInt(storeData.store.manager.startDate.toString().split('.')[0])
+    : 0;
+  
   const prompt = `당신은 소매업체의 현장 관리 전문가이자 데이터 분석가입니다. 다음 매장의 상세 데이터를 심층 분석하여 실무진이 즉시 실행할 수 있는 전략적 인사이트를 제공해주세요.
 
 【매장 기본 정보】
 - 매장명: ${storeData.store.name}
 - 매장 형태: ${storeData.store.category}
 - 위치: ${storeData.store.location}
-- 담당 매니저: ${storeData.store.manager.name} (${storeData.store.manager.position})
 - 매장 평수: ${storeData.store.py || 'N/A'}평
+- 담당 매니저: ${storeData.store.manager.name} (${storeData.store.manager.position}, 근속 ${managerYears}년)
 
 【핵심 성과 지표】
 - 연매출 (1~11월): ${storeData.yearToDateRevenue?.toLocaleString() || 0}만원
 - 전년 대비 신장률: ${storeData.growthRate && storeData.growthRate >= 0 ? '+' : ''}${storeData.growthRate?.toFixed(1) || 0}%
 
-【월별 실적 상세 분석】
+【월별 실적 상세 분석 (전년 대비)】
 ${monthlyDetails}
 
 【주요 아이템 성과 (상위 5개)】
 ${topItems}
 
-【시즌별 판매 분석 (백데이터 기반)】
+【시즌별 판매 분석 (백데이터)】
 ${itemSeasonAnalysis.시즌별요약}
+${itemSeasonAnalysis.시즌성장분석}
+${itemSeasonAnalysis.시즌감소분석}
 
-【ITEM별 판매 분석 (백데이터 기반)】
+【ITEM별 판매 분석 (백데이터)】
 ${itemSeasonAnalysis.ITEM별요약}
+${itemSeasonAnalysis.ITEM성장분석}
+${itemSeasonAnalysis.ITEM감소분석}
 
 【반품 분석】
 ${itemSeasonAnalysis.반품분석}
@@ -68,31 +77,45 @@ ${itemSeasonAnalysis.반품분석}
 【월별 판매 패턴】
 ${itemSeasonAnalysis.월별패턴}
 
+【최근 3개월 추이】
+${itemSeasonAnalysis.최근3개월추이}
+
 【심층 분석 요청사항】
-다음 4가지 관점에서 분석해주세요:
+다음 5가지 관점에서 종합적으로 분석해주세요:
 
-1. 【성과 요약】매장의 전반적인 성과를 2-3문장으로 요약 (강점과 약점 포함)
+1. 【성과 종합 평가】매장의 전반적인 성과를 2-3문장으로 요약
+   - 강점: 성장하고 있는 영역과 우수한 지표
+   - 약점: 개선이 필요한 영역과 위험 신호
+   - 구체적인 수치와 퍼센트를 반드시 포함
 
-2. 【핵심 이슈】가장 주목해야 할 핵심 이슈 1가지
-   - 긍정적 이슈: 성장 동력이 되는 요소
-   - 개선 필요 이슈: 즉시 대응이 필요한 문제점
-   - 구체적인 수치와 데이터를 근거로 제시
+2. 【위험 신호 & 기회 포착】가장 주목해야 할 핵심 이슈 2가지
+   - 위험 신호: 즉시 대응이 필요한 문제점 (예: 특정 시즌/ITEM 급감, 반품률 상승 등)
+   - 기회 포착: 성장 동력이 되는 요소 (예: 급성장 시즌/ITEM, 최근 개선 추세 등)
+   - 각각 구체적인 수치와 데이터를 근거로 제시
 
-3. 【시즌/ITEM 전략】시즌별 및 ITEM별 데이터를 바탕으로 한 전략적 제안
-   - 주력 시즌/ITEM의 활용 방안
-   - 저성과 시즌/ITEM의 개선 방안
+3. 【시즌/ITEM 전략 분석】백데이터를 바탕으로 한 전략적 제안
+   - 주력 시즌/ITEM의 강화 방안 (성장하는 시즌/ITEM을 어떻게 더 활용할 것인가)
+   - 저성과 시즌/ITEM의 개선 방안 (감소하는 시즌/ITEM을 어떻게 회복시킬 것인가)
+   - 시즌별/ITEM별 우선순위 제시
 
-4. 【실행 액션】즉시 실행 가능한 구체적인 액션 아이템 2가지
-   - 우선순위가 높은 것부터
-   - 측정 가능한 목표 포함
+4. 【반품 & 품질 관리】반품 데이터를 바탕으로 한 인사이트
+   - 반품률이 높다면 원인 분석 및 대응 방안
+   - 반품률이 낮다면 유지 방안
+
+5. 【즉시 실행 액션】우선순위별 구체적인 액션 아이템 3가지
+   - 1순위: 가장 시급한 개선 사항 (측정 가능한 목표 포함)
+   - 2순위: 중기 개선 사항
+   - 3순위: 장기 전략 사항
+   - 각 액션은 구체적이고 실행 가능해야 함
 
 【작성 형식】
 - 전문적이면서도 이해하기 쉬운 톤
-- 구체적인 수치와 퍼센트 언급 필수
+- 구체적인 수치와 퍼센트 언급 필수 (예: "24N 시즌이 전년 대비 15.3% 증가")
 - 실행 가능하고 측정 가능한 제안
-- 이모지 적절히 사용 (최대 5개)
-- 총 400-500자 내외
-- 각 섹션을 명확히 구분하여 작성
+- 이모지 적절히 사용 (섹션별 1-2개, 총 8-10개)
+- 총 600-700자 내외
+- 각 섹션을 명확히 구분하여 작성 (【】표시 사용)
+- 위험 신호는 빨간색 이모지(⚠️🚨), 기회는 초록색 이모지(✅📈) 사용 권장
 `;
 
   try {
@@ -128,10 +151,10 @@ ${itemSeasonAnalysis.월별패턴}
           model: modelName,
           // generationConfig를 추가하여 호환성 향상
           generationConfig: {
-            temperature: 0.7,
+            temperature: 0.8, // 더 창의적인 분석을 위해 증가
             topK: 40,
             topP: 0.95,
-            maxOutputTokens: 1024,
+            maxOutputTokens: 2048, // 더 긴 응답을 위해 증가
           }
         });
         const result = await model.generateContent(prompt);
