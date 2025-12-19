@@ -1,5 +1,5 @@
 
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import { StoreData } from "../types";
 
 export const getStoreInsights = async (storeData: StoreData): Promise<string> => {
@@ -18,7 +18,7 @@ export const getStoreInsights = async (storeData: StoreData): Promise<string> =>
     return "⚠️ Gemini API 키가 설정되지 않았습니다. .env.local 파일에 VITE_GEMINI_API_KEY를 설정하고 개발 서버를 재시작해주세요.";
   }
 
-  const ai = new GoogleGenAI({ apiKey });
+  const genAI = new GoogleGenerativeAI(apiKey);
   
   const prompt = `
     다음은 '${storeData.store.name}' 매장의 실적 데이터입니다.
@@ -39,7 +39,7 @@ export const getStoreInsights = async (storeData: StoreData): Promise<string> =>
   `;
 
   try {
-    const model = ai.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
     const result = await model.generateContent(prompt);
     const response = await result.response;
     const text = response.text();
