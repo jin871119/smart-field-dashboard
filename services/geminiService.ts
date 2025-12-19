@@ -39,7 +39,9 @@ export const getStoreInsights = async (storeData: StoreData): Promise<string> =>
   `;
 
   try {
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    // 사용 가능한 모델: gemini-pro, gemini-1.5-pro, gemini-1.5-flash-latest
+    // v1beta API에서는 gemini-1.5-flash 대신 gemini-1.5-flash-latest 또는 gemini-pro 사용
+    const model = genAI.getGenerativeModel({ model: "gemini-pro" });
     const result = await model.generateContent(prompt);
     const response = await result.response;
     const text = response.text();
