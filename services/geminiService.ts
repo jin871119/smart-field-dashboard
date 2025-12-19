@@ -55,10 +55,10 @@ export const getStoreInsights = async (storeData: StoreData): Promise<string> =>
     
     // @google/generative-ai 패키지 사용 - 여러 모델을 순차적으로 시도
     // 패키지는 내부적으로 올바른 API 버전과 모델 이름을 사용합니다
+    // v1beta API에서 지원하는 모델만 사용 (gemini-pro는 v1beta에서 지원 안 함)
     const models = [
       'gemini-1.5-flash',
-      'gemini-1.5-pro',
-      'gemini-pro'
+      'gemini-1.5-pro'
     ];
     
     let lastError: any = null;
