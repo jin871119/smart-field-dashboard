@@ -16,7 +16,8 @@ export const getStoreInsights = async (storeData: StoreData): Promise<string> =>
   });
   
   if (!apiKey) {
-    return "⚠️ Gemini API 키가 설정되지 않았습니다. .env.local 파일에 VITE_GEMINI_API_KEY를 설정하고 개발 서버를 재시작해주세요.";
+    console.warn('API key not found, using local AI analysis');
+    return generateLocalInsight(storeData);
   }
 
   const genAI = new GoogleGenerativeAI(apiKey);
