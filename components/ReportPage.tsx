@@ -92,7 +92,7 @@ const ReportPage: React.FC = () => {
           : 0
       }))
       .sort((a, b) => b.판매액 - a.판매액);
-  }, [data]);
+  }, [filteredData]);
 
   // ITEM별 데이터 집계
   const itemData = useMemo(() => {
