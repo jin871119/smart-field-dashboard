@@ -1,5 +1,4 @@
 
-import { GoogleGenerativeAI } from "@google/generative-ai";
 import { StoreData } from "../types";
 
 export const getStoreInsights = async (storeData: StoreData): Promise<string> => {
@@ -18,8 +17,6 @@ export const getStoreInsights = async (storeData: StoreData): Promise<string> =>
     return "⚠️ Gemini API 키가 설정되지 않았습니다. .env.local 파일에 VITE_GEMINI_API_KEY를 설정하고 개발 서버를 재시작해주세요.";
   }
 
-  const genAI = new GoogleGenerativeAI(apiKey);
-  
   const prompt = `
     다음은 '${storeData.store.name}' 매장의 실적 데이터입니다.
     
@@ -39,38 +36,71 @@ export const getStoreInsights = async (storeData: StoreData): Promise<string> =>
   `;
 
   try {
-    // 사용 가능한 모델 시도 순서: gemini-1.5-flash-latest, gemini-1.5-pro, gemini-pro
-    let model;
-    let result;
-    let response;
-    let text;
-    
-    // 먼저 gemini-1.5-flash-latest 시도
-    try {
-      model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest" });
-      result = await model.generateContent(prompt);
-      response = await result.response;
-      text = response.text();
-    } catch (flashError: any) {
-      console.warn("gemini-1.5-flash-latest failed, trying gemini-1.5-pro:", flashError);
-      // gemini-1.5-pro로 재시도
-      try {
-        model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
-        result = await model.generateContent(prompt);
-        response = await result.response;
-        text = response.text();
-      } catch (proError: any) {
-        console.warn("gemini-1.5-pro failed, trying gemini-pro:", proError);
-        // 마지막으로 gemini-pro 시도
-        model = genAI.getGenerativeModel({ model: "gemini-pro" });
-        result = await model.generateContent(prompt);
-        response = await result.response;
-        text = response.text();
+    // REST API를 직접 호출하여 v1 API 사용
+    // 사용 가능한 모델: models/gemini-1.5-flash, models/gemini-1.5-pro
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          contents: [{
+            parts: [{
+              text: prompt
+            }]
+          }]
+        })
       }
+    );
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      console.error('Gemini API HTTP Error:', response.status, errorData);
+      
+      // 404 오류 시 다른 모델 시도
+      if (response.status === 404) {
+        console.log('Trying gemini-1.5-pro instead...');
+        const fallbackResponse = await fetch(
+          `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-pro:generateContent?key=${apiKey}`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              contents: [{
+                parts: [{
+                  text: prompt
+                }]
+              }]
+            })
+          }
+        );
+        
+        if (!fallbackResponse.ok) {
+          throw new Error(`API Error: ${fallbackResponse.status}`);
+        }
+        
+        const fallbackData = await fallbackResponse.json();
+        const text = fallbackData.candidates?.[0]?.content?.parts?.[0]?.text;
+        
+        if (!text) {
+          return "인사이트를 불러올 수 없습니다. 응답이 비어있습니다.";
+        }
+        
+        return text;
+      }
+      
+      throw new Error(`API Error: ${response.status}`);
     }
+
+    const data = await response.json();
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
     
     if (!text) {
-      console.warn("Gemini API returned empty response");
+      console.warn("Gemini API returned empty response", data);
       return "인사이트를 불러올 수 없습니다. 응답이 비어있습니다.";
     }
     
@@ -79,7 +109,7 @@ export const getStoreInsights = async (storeData: StoreData): Promise<string> =>
     console.error("Gemini API Error:", error);
     
     // 더 자세한 에러 메시지
-    if (error?.message?.includes('API_KEY')) {
+    if (error?.message?.includes('API_KEY') || error?.message?.includes('401')) {
       return "⚠️ API 키가 유효하지 않습니다. .env.local 파일의 VITE_GEMINI_API_KEY를 확인해주세요.";
     }
     
