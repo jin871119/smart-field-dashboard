@@ -321,48 +321,6 @@ const ReportPage: React.FC<ReportPageProps> = ({ selectedStoreName }) => {
         </div>
       </div>
 
-      {/* 시즌별 재고 현황 */}
-      <div className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100">
-        <h3 className="text-sm font-bold text-slate-900 mb-4 flex items-center gap-2">
-          <div className="w-1.5 h-4 bg-green-500 rounded-full"></div>
-          시즌별 재고 현황
-        </h3>
-        <div className="h-64 w-full">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={seasonInventoryData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-              <XAxis dataKey="시즌" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8' }} />
-              <YAxis yAxisId="left" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8' }} />
-              <YAxis yAxisId="right" orientation="right" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#10b981' }} />
-              <Tooltip 
-                content={({ active, payload, label }) => {
-                  if (active && payload && payload.length) {
-                    return (
-                      <div className="bg-white p-3 rounded-lg shadow-md border border-slate-100 text-xs">
-                        <p className="font-bold text-slate-900 mb-1">{label}</p>
-                        {payload.map((entry: any, index: number) => (
-                          <p key={index} className="text-slate-700">
-                            {entry.name}: <span className="font-semibold">
-                              {entry.dataKey === '재고금액' 
-                                ? `${entry.value.toLocaleString()}만원`
-                                : `${entry.value.toLocaleString()}개`}
-                            </span>
-                          </p>
-                        ))}
-                      </div>
-                    );
-                  }
-                  return null;
-                }}
-              />
-              <Legend />
-              <Bar yAxisId="right" dataKey="재고수량" fill="#10b981" radius={[4, 4, 0, 0]} name="재고수량 (개)" />
-              <Bar yAxisId="left" dataKey="재고금액" fill="#3b82f6" radius={[4, 4, 0, 0]} name="재고금액 (만원)" />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
-
       {/* 시즌별 재고 상세 정보 */}
       <div className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100">
         <h3 className="text-sm font-bold text-slate-900 mb-4 flex items-center gap-2">
