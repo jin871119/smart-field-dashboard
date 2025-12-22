@@ -74,3 +74,6 @@ const PerformanceCharts: React.FC<PerformanceChartsProps> = ({ monthly }) => {
 
 export default PerformanceCharts;
 
+
+
+

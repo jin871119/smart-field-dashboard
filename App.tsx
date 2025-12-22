@@ -4,7 +4,7 @@ import Layout from './components/Layout';
 import StoreSelector from './components/StoreSelector';
 import StoreInfoCard from './components/StoreInfoCard';
 import PerformanceCharts from './components/PerformanceCharts';
-import AIInsightCard from './components/AIInsightCard';
+import MonthlySalesTrend from './components/MonthlySalesTrend';
 import ReportPage from './components/ReportPage';
 import { convertExcelDataToStoreData } from './utils/storeDataConverter';
 import { analyzeItemSeasonData } from './utils/itemSeasonAnalyzer';
@@ -94,7 +94,7 @@ const App: React.FC = () => {
             <>
               <StoreInfoCard store={selectedData.store} />
               
-              <AIInsightCard data={selectedData} />
+              <MonthlySalesTrend selectedStoreName={selectedData.store.name} />
 
               <PerformanceCharts 
                 monthly={selectedData.monthlyPerformance} 

@@ -73,3 +73,6 @@
 - **빌드 실패**: 로컬에서 `npm run build` 실행하여 오류 확인
 - **라우팅 오류**: `vercel.json`의 rewrites 설정 확인
 
+
+
+
