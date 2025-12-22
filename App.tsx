@@ -4,6 +4,7 @@ import Layout from './components/Layout';
 import StoreSelector from './components/StoreSelector';
 import StoreInfoCard from './components/StoreInfoCard';
 import MonthlySalesTrend from './components/MonthlySalesTrend';
+import StoreBestItems from './components/StoreBestItems';
 import ReportPage from './components/ReportPage';
 import { convertExcelDataToStoreData } from './utils/storeDataConverter';
 import { analyzeItemSeasonData } from './utils/itemSeasonAnalyzer';
@@ -94,6 +95,8 @@ const App: React.FC = () => {
               <StoreInfoCard store={selectedData.store} />
               
               <MonthlySalesTrend selectedStoreName={selectedData.store.name} />
+
+              <StoreBestItems selectedStoreName={selectedData.store.name} />
             </>
           )}
 
