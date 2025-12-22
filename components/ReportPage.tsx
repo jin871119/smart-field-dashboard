@@ -241,6 +241,7 @@ const ReportPage: React.FC<ReportPageProps> = ({ selectedStoreName }) => {
         재고수량: values.재고수량,
         재고금액: Math.round(values.재고금액 / 10000) // 만원 단위
       }))
+      .filter(item => item.재고금액 > 0) // 재고금액이 0만원인 항목 제외
       .sort((a, b) => b.재고금액 - a.재고금액);
   }, [inventoryData, selectedStoreName]);
 
