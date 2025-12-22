@@ -11,6 +11,7 @@ import {
   CartesianGrid
 } from 'recharts';
 import itemSeasonDataJson from '../item_season_data.json';
+import storeInventoryDataJson from '../store_inventory_data.json';
 
 interface ItemSeasonData {
   매장코드: string;
@@ -35,12 +36,27 @@ interface ItemSeasonDataJson {
   total_rows: number;
 }
 
+interface StoreInventoryData {
+  시즌: string;
+  매장코드: string;
+  매장명: string;
+  매장재고수량: number;
+  매장재고택가: number;
+}
+
+interface StoreInventoryDataJson {
+  headers: string[];
+  data: StoreInventoryData[];
+  total_rows: number;
+}
+
 interface ReportPageProps {
   selectedStoreName?: string;
 }
 
 const ReportPage: React.FC<ReportPageProps> = ({ selectedStoreName }) => {
   const data = itemSeasonDataJson as ItemSeasonDataJson;
+  const inventoryData = storeInventoryDataJson as StoreInventoryDataJson;
   const [selectedMonth, setSelectedMonth] = useState<string>('전체');
   
   // 선택한 매장의 데이터만 필터링
@@ -189,6 +205,44 @@ const ReportPage: React.FC<ReportPageProps> = ({ selectedStoreName }) => {
       .sort((a, b) => b.올해 - a.올해);
   }, [filteredData, selectedMonth]);
 
+  // 시즌별 재고 데이터 집계
+  const seasonInventoryData = useMemo(() => {
+    if (!selectedStoreName) {
+      return [];
+    }
+
+    // 선택한 매장의 재고 데이터만 필터링
+    const storeInventory = inventoryData.data.filter((item) => {
+      const storeName = item.매장명 || '';
+      // 괄호 안의 이름 추출
+      const match = storeName.match(/\(([^)]+)\)/);
+      if (match) {
+        const nameInBracket = match[1];
+        return nameInBracket === selectedStoreName || storeName.includes(selectedStoreName);
+      }
+      return storeName.includes(selectedStoreName) || selectedStoreName.includes(storeName);
+    });
+
+    // 시즌별로 집계
+    const seasonMap: { [key: string]: { 재고수량: number; 재고금액: number } } = {};
+
+    storeInventory.forEach((item) => {
+      const season = item.시즌 || '기타';
+      if (!seasonMap[season]) {
+        seasonMap[season] = { 재고수량: 0, 재고금액: 0 };
+      }
+      seasonMap[season].재고수량 += item.매장재고수량 || 0;
+      seasonMap[season].재고금액 += item.매장재고택가 || 0;
+    });
+
+    return Object.entries(seasonMap)
+      .map(([시즌, values]) => ({
+        시즌,
+        재고수량: values.재고수량,
+        재고금액: Math.round(values.재고금액 / 10000) // 만원 단위
+      }))
+      .sort((a, b) => b.재고금액 - a.재고금액);
+  }, [inventoryData, selectedStoreName]);
 
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
@@ -246,27 +300,6 @@ const ReportPage: React.FC<ReportPageProps> = ({ selectedStoreName }) => {
         </div>
       </div>
 
-      {/* 시즌별 판매 현황 */}
-      <div className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100">
-        <h3 className="text-sm font-bold text-slate-900 mb-4 flex items-center gap-2">
-          <div className="w-1.5 h-4 bg-blue-600 rounded-full"></div>
-          시즌별 판매 현황
-        </h3>
-        <div className="h-64 w-full">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={seasonData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-              <XAxis dataKey="시즌" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8' }} />
-              <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8' }} />
-              <Tooltip content={<CustomTooltip />} />
-              <Legend />
-              <Bar dataKey="올해" fill="#2563eb" radius={[4, 4, 0, 0]} name="2025년 정상 판매액 (만원)" />
-              <Bar dataKey="작년" fill="#94a3b8" radius={[4, 4, 0, 0]} name="2024년 정상 판매액 (만원)" />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
-
       {/* ITEM별 판매 현황 */}
       <div className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100">
         <h3 className="text-sm font-bold text-slate-900 mb-4 flex items-center gap-2">
@@ -288,35 +321,75 @@ const ReportPage: React.FC<ReportPageProps> = ({ selectedStoreName }) => {
         </div>
       </div>
 
-      {/* 시즌별 상세 정보 */}
+      {/* 시즌별 재고 현황 */}
       <div className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100">
         <h3 className="text-sm font-bold text-slate-900 mb-4 flex items-center gap-2">
-          <div className="w-1.5 h-4 bg-purple-500 rounded-full"></div>
-          시즌별 상세 정보
+          <div className="w-1.5 h-4 bg-green-500 rounded-full"></div>
+          시즌별 재고 현황
+        </h3>
+        <div className="h-64 w-full">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={seasonInventoryData}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+              <XAxis dataKey="시즌" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8' }} />
+              <YAxis yAxisId="left" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8' }} />
+              <YAxis yAxisId="right" orientation="right" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#10b981' }} />
+              <Tooltip 
+                content={({ active, payload, label }) => {
+                  if (active && payload && payload.length) {
+                    return (
+                      <div className="bg-white p-3 rounded-lg shadow-md border border-slate-100 text-xs">
+                        <p className="font-bold text-slate-900 mb-1">{label}</p>
+                        {payload.map((entry: any, index: number) => (
+                          <p key={index} className="text-slate-700">
+                            {entry.name}: <span className="font-semibold">
+                              {entry.dataKey === '재고금액' 
+                                ? `${entry.value.toLocaleString()}만원`
+                                : `${entry.value.toLocaleString()}개`}
+                            </span>
+                          </p>
+                        ))}
+                      </div>
+                    );
+                  }
+                  return null;
+                }}
+              />
+              <Legend />
+              <Bar yAxisId="right" dataKey="재고수량" fill="#10b981" radius={[4, 4, 0, 0]} name="재고수량 (개)" />
+              <Bar yAxisId="left" dataKey="재고금액" fill="#3b82f6" radius={[4, 4, 0, 0]} name="재고금액 (만원)" />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+
+      {/* 시즌별 재고 상세 정보 */}
+      <div className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100">
+        <h3 className="text-sm font-bold text-slate-900 mb-4 flex items-center gap-2">
+          <div className="w-1.5 h-4 bg-green-500 rounded-full"></div>
+          시즌별 재고 상세 정보
         </h3>
         <div className="space-y-3">
-          {seasonData.slice(0, 10).map((season, idx) => (
-            <div key={season.시즌} className="flex items-center justify-between p-3 bg-slate-50 rounded-xl">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center text-xs font-bold">
-                  {idx + 1}
+          {seasonInventoryData.length > 0 ? (
+            seasonInventoryData.map((season, idx) => (
+              <div key={season.시즌} className="flex items-center justify-between p-3 bg-slate-50 rounded-xl">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-green-100 text-green-600 flex items-center justify-center text-xs font-bold">
+                    {idx + 1}
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-slate-900">{season.시즌}</p>
+                    <p className="text-[10px] text-slate-500">{season.재고수량.toLocaleString()}개</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-sm font-bold text-slate-900">{season.시즌}</p>
-                  <p className="text-[10px] text-slate-500">{season.판매수량}건</p>
-                </div>
-              </div>
-              <div className="text-right">
-                <p className="text-sm font-bold text-slate-900">{season.올해.toLocaleString()}만원</p>
-                <div className="flex items-center gap-2">
-                  <p className="text-[10px] text-slate-500">작년: {season.작년.toLocaleString()}만원</p>
-                  <p className={`text-[10px] font-bold ${season.성장률 >= 0 ? 'text-green-500' : 'text-red-400'}`}>
-                    {season.성장률 >= 0 ? '+' : ''}{season.성장률.toFixed(1)}%
-                  </p>
+                <div className="text-right">
+                  <p className="text-sm font-bold text-slate-900">{season.재고금액.toLocaleString()}만원</p>
                 </div>
               </div>
-            </div>
-          ))}
+            ))
+          ) : (
+            <p className="text-xs text-slate-500 text-center py-8">재고 데이터가 없습니다.</p>
+          )}
         </div>
       </div>
     </div>
