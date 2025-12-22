@@ -1,7 +1,8 @@
 import React, { useMemo } from 'react';
 import {
   ResponsiveContainer,
-  LineChart,
+  ComposedChart,
+  Bar,
   Line,
   XAxis,
   YAxis,
@@ -80,10 +81,14 @@ const MonthlySalesTrend: React.FC<MonthlySalesTrendProps> = ({ selectedStoreName
     return Object.entries(monthlyMap)
       .map(([monthKey, values]) => {
         const month = parseInt(monthKey.substring(4, 6));
+        const 올해 = Math.round(values.current / 10000);
+        const 작년 = Math.round(values.lastYear / 10000);
+        const 신장률 = 작년 > 0 ? ((올해 - 작년) / 작년) * 100 : 0;
         return {
           월: `${month}월`,
-          올해: Math.round(values.current / 10000),
-          작년: Math.round(values.lastYear / 10000)
+          올해,
+          작년,
+          신장률: Math.round(신장률 * 10) / 10
         };
       })
       .sort((a, b) => {
@@ -98,11 +103,20 @@ const MonthlySalesTrend: React.FC<MonthlySalesTrendProps> = ({ selectedStoreName
       return (
         <div className="bg-white p-3 rounded-lg shadow-md border border-slate-100 text-xs">
           <p className="font-bold text-slate-900 mb-1">{label}</p>
-          {payload.map((entry: any, index: number) => (
-            <p key={index} className="text-slate-700">
-              {entry.name}: <span className="font-semibold">{entry.value.toLocaleString()}만원</span>
-            </p>
-          ))}
+          {payload.map((entry: any, index: number) => {
+            if (entry.dataKey === '신장률') {
+              return (
+                <p key={index} className="text-slate-700">
+                  {entry.name}: <span className="font-semibold">{entry.value >= 0 ? '+' : ''}{entry.value.toFixed(1)}%</span>
+                </p>
+              );
+            }
+            return (
+              <p key={index} className="text-slate-700">
+                {entry.name}: <span className="font-semibold">{entry.value.toLocaleString()}만원</span>
+              </p>
+            );
+          })}
         </div>
       );
     }
@@ -117,15 +131,38 @@ const MonthlySalesTrend: React.FC<MonthlySalesTrendProps> = ({ selectedStoreName
       </h3>
       <div className="h-64 w-full">
         <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={monthlyData}>
+          <ComposedChart data={monthlyData}>
             <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
             <XAxis dataKey="월" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8' }} />
-            <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8' }} />
+            <YAxis 
+              yAxisId="left"
+              axisLine={false} 
+              tickLine={false} 
+              tick={{ fontSize: 10, fill: '#94a3b8' }}
+              label={{ value: '매출 (만원)', angle: -90, position: 'insideLeft', style: { textAnchor: 'middle', fontSize: 10, fill: '#64748b' } }}
+            />
+            <YAxis 
+              yAxisId="right"
+              orientation="right"
+              axisLine={false} 
+              tickLine={false} 
+              tick={{ fontSize: 10, fill: '#f97316' }}
+              label={{ value: '신장률 (%)', angle: 90, position: 'insideRight', style: { textAnchor: 'middle', fontSize: 10, fill: '#f97316' } }}
+            />
             <Tooltip content={<CustomTooltip />} />
             <Legend />
-            <Line type="monotone" dataKey="올해" stroke="#2563eb" strokeWidth={2} dot={{ r: 4 }} name="2025년 (만원)" />
-            <Line type="monotone" dataKey="작년" stroke="#94a3b8" strokeWidth={2} dot={{ r: 4 }} name="2024년 (만원)" />
-          </LineChart>
+            <Bar yAxisId="left" dataKey="올해" fill="#2563eb" radius={[4, 4, 0, 0]} name="2025년 매출 (만원)" />
+            <Bar yAxisId="left" dataKey="작년" fill="#94a3b8" radius={[4, 4, 0, 0]} name="2024년 매출 (만원)" />
+            <Line 
+              yAxisId="right"
+              type="monotone" 
+              dataKey="신장률" 
+              stroke="#f97316" 
+              strokeWidth={2} 
+              dot={{ r: 4, fill: '#f97316' }}
+              name="신장률 (%)"
+            />
+          </ComposedChart>
         </ResponsiveContainer>
       </div>
     </div>
