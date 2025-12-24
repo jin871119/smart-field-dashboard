@@ -12,6 +12,7 @@ import {
 } from 'recharts';
 import itemSeasonDataJson from '../item_season_data.json';
 import storeInventoryDataJson from '../store_inventory_data.json';
+import competitorDataV2Json from '../competitor_data_v2.json';
 
 interface ItemSeasonData {
   매장코드: string;
@@ -50,6 +51,24 @@ interface StoreInventoryDataJson {
   total_rows: number;
 }
 
+interface CompetitorStoreData {
+  백화점: string;
+  브랜드별_월평균: { [brandName: string]: number };
+}
+
+interface BrandRankingItem {
+  백화점: string;
+  월평균: number;
+  순위: number;
+}
+
+interface CompetitorDataV2Json {
+  brands: string[];
+  stores: CompetitorStoreData[];
+  total_stores: number;
+  brand_rankings?: { [brandName: string]: BrandRankingItem[] };
+}
+
 interface ReportPageProps {
   selectedStoreName?: string;
 }
@@ -57,6 +76,7 @@ interface ReportPageProps {
 const ReportPage: React.FC<ReportPageProps> = ({ selectedStoreName }) => {
   const data = itemSeasonDataJson as ItemSeasonDataJson;
   const inventoryData = storeInventoryDataJson as StoreInventoryDataJson;
+  const competitorData = competitorDataV2Json as CompetitorDataV2Json;
   const [selectedMonth, setSelectedMonth] = useState<string>('전체');
   
   // 선택한 매장의 데이터만 필터링
@@ -205,6 +225,13 @@ const ReportPage: React.FC<ReportPageProps> = ({ selectedStoreName }) => {
       .sort((a, b) => b.올해 - a.올해);
   }, [filteredData, selectedMonth]);
 
+  // 브랜드별 순위 데이터 (중복 제거된 브랜드 목록)
+  const uniqueBrands = useMemo(() => {
+    if (!competitorData || !competitorData.brands) return [];
+    // 중복 제거
+    return Array.from(new Set(competitorData.brands));
+  }, [competitorData]);
+
   // 시즌별 재고 데이터 집계
   const seasonInventoryData = useMemo(() => {
     if (!selectedStoreName) {
@@ -300,6 +327,148 @@ const ReportPage: React.FC<ReportPageProps> = ({ selectedStoreName }) => {
           ))}
         </div>
       </div>
+
+      {/* 점포별 브랜드 순위표 */}
+      {competitorData.stores && competitorData.stores.length > 0 && (() => {
+        // 선택된 매장이 있으면 해당 매장만 필터링, 없으면 전체 표시
+        const filteredStores = selectedStoreName
+          ? competitorData.stores.filter((store) => {
+              const storeName = store.백화점 || '';
+              // 정확한 매칭 또는 포함 관계 확인
+              return storeName === selectedStoreName || 
+                     storeName.includes(selectedStoreName) || 
+                     selectedStoreName.includes(storeName);
+            })
+          : competitorData.stores;
+
+        if (filteredStores.length === 0) {
+          return (
+            <div className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100">
+              <h3 className="text-sm font-bold text-slate-900 mb-4 flex items-center gap-2">
+                <div className="w-1.5 h-4 bg-purple-500 rounded-full"></div>
+                점포별 브랜드 순위 (월평균 1~11월 기준)
+              </h3>
+              <p className="text-xs text-slate-500 text-center py-8">
+                선택된 매장의 경쟁사 데이터가 없습니다.
+              </p>
+            </div>
+          );
+        }
+
+        return (
+          <div className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100">
+            <h3 className="text-sm font-bold text-slate-900 mb-4 flex items-center gap-2">
+              <div className="w-1.5 h-4 bg-purple-500 rounded-full"></div>
+              점포별 브랜드 순위 (월평균 1~11월 기준)
+              {selectedStoreName && (
+                <span className="text-xs text-slate-500 font-normal ml-2">
+                  ({selectedStoreName} 매장)
+                </span>
+              )}
+            </h3>
+            <div className="space-y-4 max-h-[800px] overflow-y-auto">
+              {filteredStores.map((store) => {
+              const isSelectedStore = selectedStoreName && 
+                (store.백화점.includes(selectedStoreName) || 
+                 selectedStoreName.includes(store.백화점));
+              
+              // 해당 점포의 브랜드별 데이터를 순위대로 정렬
+              const brandRankings = Object.entries(store.브랜드별_월평균)
+                .filter(([_, value]) => value > 0) // 0보다 큰 값만
+                .map(([brandName, monthlyAvg]) => ({
+                  브랜드: brandName,
+                  월평균: monthlyAvg,
+                  순위: 0 // 나중에 할당
+                }))
+                .sort((a, b) => b.월평균 - a.월평균); // 월평균 내림차순 정렬
+              
+              // 순위 할당
+              brandRankings.forEach((item, idx) => {
+                item.순위 = idx + 1;
+              });
+
+              if (brandRankings.length === 0) return null;
+
+              return (
+                <div
+                  key={store.백화점}
+                  className={`border rounded-xl overflow-hidden ${
+                    isSelectedStore
+                      ? 'border-blue-300 bg-blue-50/30'
+                      : 'border-slate-200'
+                  }`}
+                >
+                  <div className={`px-4 py-3 border-b ${isSelectedStore ? 'bg-blue-100 border-blue-200' : 'bg-slate-50 border-slate-200'}`}>
+                    <h4 className={`text-sm font-bold ${isSelectedStore ? 'text-blue-900' : 'text-slate-900'}`}>
+                      {store.백화점}
+                      {isSelectedStore && <span className="ml-2 text-xs text-blue-600">(선택된 매장)</span>}
+                    </h4>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead className="bg-slate-50">
+                        <tr>
+                          <th className="px-4 py-2 text-left text-xs font-semibold text-slate-600 border-b border-slate-200">
+                            순위
+                          </th>
+                          <th className="px-4 py-2 text-left text-xs font-semibold text-slate-600 border-b border-slate-200">
+                            브랜드
+                          </th>
+                          <th className="px-4 py-2 text-right text-xs font-semibold text-slate-600 border-b border-slate-200">
+                            월평균 (천원)
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {brandRankings.map((item) => {
+                          const isMLB = item.브랜드 === 'MLB';
+                          return (
+                            <tr
+                              key={`${store.백화점}-${item.브랜드}`}
+                              className={`border-b transition-colors ${
+                                isMLB
+                                  ? 'bg-blue-50 border-blue-200 hover:bg-blue-100'
+                                  : 'border-slate-100 hover:bg-slate-50'
+                              }`}
+                            >
+                              <td className="px-4 py-2">
+                                <div
+                                  className={`w-6 h-6 rounded flex items-center justify-center text-xs font-bold ${
+                                    isMLB
+                                      ? 'bg-blue-600 text-white'
+                                      : item.순위 <= 3
+                                      ? 'bg-purple-100 text-purple-600'
+                                      : item.순위 <= 5
+                                      ? 'bg-purple-50 text-purple-500'
+                                      : 'bg-slate-100 text-slate-600'
+                                  }`}
+                                >
+                                  {item.순위}
+                                </div>
+                              </td>
+                              <td className="px-4 py-2">
+                                <span className={`text-xs font-semibold ${isMLB ? 'text-blue-700 font-bold' : 'text-slate-900'}`}>
+                                  {item.브랜드}
+                                </span>
+                              </td>
+                              <td className="px-4 py-2 text-right">
+                                <span className={`text-xs font-bold ${isMLB ? 'text-blue-700' : 'text-slate-900'}`}>
+                                  {Math.round(item.월평균).toLocaleString()}
+                                </span>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              );
+              })}
+            </div>
+          </div>
+        );
+      })()}
 
       {/* ITEM별 판매 현황 */}
       <div className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100">
