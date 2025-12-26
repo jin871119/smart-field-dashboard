@@ -11,26 +11,30 @@ def read_group_data(file_path, output_json_path):
         
         sheet = workbook['단체']
         
-        # 매장별 소량단체판매액 데이터 수집
-        stores_data = []
+        # 매장별 소량단체판매액 데이터 수집 (25년 1~11월 합계)
+        # 각 행이 월별 데이터이므로 매장별로 그룹화하고 합산
+        store_map = {}
+        
+        # 25년 1~11월 날짜 목록
+        months_2025 = [f'2025{str(m).zfill(2)}' for m in range(1, 12)]
         
         for row_idx in range(2, sheet.max_row + 1):
-            # 매장코드 (Column 1)
-            store_code = sheet.cell(row=row_idx, column=1).value
-            
-            # 매장코드가 없으면 데이터 끝으로 간주
-            if not store_code:
-                break
-            
-            # 매장코드를 문자열로 변환
-            store_code = str(store_code).strip()
-            
             # 매장명 (Column 2)
             store_name = sheet.cell(row=row_idx, column=2).value
-            if store_name:
-                store_name = str(store_name).strip()
-            else:
-                store_name = ''
+            
+            # 매장명이 없으면 건너뛰기
+            if not store_name:
+                continue
+            
+            store_name = str(store_name).strip()
+            
+            # 날짜 (Column 3) - 문자열 형식 (예: "202501")
+            date_value = sheet.cell(row=row_idx, column=3).value
+            date_str = str(date_value) if date_value else ''
+            
+            # 25년 1~11월 데이터만 처리
+            if date_str not in months_2025:
+                continue
             
             # 소량단체판매액 (T열 = Column 20)
             small_group_sales = sheet.cell(row=row_idx, column=20).value
@@ -46,11 +50,17 @@ def read_group_data(file_path, output_json_path):
                 except:
                     small_group_sales = 0
             
-            stores_data.append({
-                '매장코드': store_code,
-                '매장명': store_name,
-                '소량단체판매액': small_group_sales
-            })
+            # 매장별로 합산
+            if store_name not in store_map:
+                store_map[store_name] = {
+                    '매장명': store_name,
+                    '소량단체판매액': 0
+                }
+            
+            store_map[store_name]['소량단체판매액'] += small_group_sales
+        
+        # 리스트로 변환
+        stores_data = list(store_map.values())
         
         # 결과 저장
         result = {
@@ -64,7 +74,7 @@ def read_group_data(file_path, output_json_path):
         print(f"총 {len(stores_data)}개 매장의 데이터를 {output_json_path}에 저장했습니다.")
         print(f"\n처음 5개 매장 데이터:")
         for store in stores_data[:5]:
-            print(f"  {store['매장명']} (코드: {store['매장코드']}): {store['소량단체판매액']:,.0f}원")
+            print(f"  {store['매장명']}: {store['소량단체판매액']:,.0f}원 ({store['소량단체판매액']/10000:,.0f}만원)")
         
     except Exception as e:
         print(f"오류 발생: {e}")
