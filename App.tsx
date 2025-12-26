@@ -10,6 +10,7 @@ import { convertExcelDataToStoreData } from './utils/storeDataConverter';
 import { analyzeItemSeasonData } from './utils/itemSeasonAnalyzer';
 import storeDataJson from './store_data.json';
 import performanceDataJson from './performance_data.json';
+import groupSalesDataJson from './group_sales_data.json';
 
 const App: React.FC = () => {
   const [currentPage, setCurrentPage] = useState<'home' | 'report'>('home');
@@ -46,6 +47,37 @@ const App: React.FC = () => {
     return itemSeasonAnalysis.전체신장률 !== undefined ? itemSeasonAnalysis.전체신장률 : (selectedData.growthRate || 0);
   }, [selectedData]);
 
+  // 소량단체매출액 (단체 시트 데이터)
+  const smallGroupSales = useMemo(() => {
+    if (!selectedData) return { amount: 0, percentage: 0 };
+    
+    const groupData = groupSalesDataJson as any;
+    const storeName = selectedData.store.name;
+    
+    // 매장명으로 매칭
+    const storeGroupData = groupData.stores?.find((item: any) => {
+      const itemStoreName = item.매장명 || '';
+      return itemStoreName === storeName || 
+             itemStoreName.includes(storeName) || 
+             storeName.includes(itemStoreName);
+    });
+    
+    if (!storeGroupData) {
+      return { amount: 0, percentage: 0 };
+    }
+    
+    const salesAmount = storeGroupData.소량단체판매액 || 0;
+    const salesAmountInManwon = Math.round(salesAmount / 10000); // 만원 단위
+    const percentage = yearToDateRevenue > 0 
+      ? (salesAmountInManwon / yearToDateRevenue) * 100 
+      : 0;
+    
+    return {
+      amount: salesAmountInManwon,
+      percentage: Math.round(percentage * 10) / 10 // 소수점 첫째자리까지
+    };
+  }, [selectedData, yearToDateRevenue]);
+
   return (
     <Layout 
       title={currentPage === 'home' ? 'Field Insight' : '리포트'} 
@@ -64,10 +96,15 @@ const App: React.FC = () => {
           <div className="grid grid-cols-2 gap-4 mb-6">
               <div className="bg-white p-4 rounded-3xl border border-slate-100 shadow-sm">
                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">연매출 (1~11월)</p>
-                <div className="flex items-baseline gap-1">
+                <div className="flex items-baseline gap-1 mb-2">
                     <span className="text-xl font-bold text-slate-900">{yearToDateRevenue.toLocaleString()}</span>
                     <span className="text-[10px] font-medium text-slate-400">만 원</span>
                 </div>
+                {smallGroupSales.amount > 0 && (
+                  <p className="text-[10px] text-slate-500 mt-2 border-t border-slate-100 pt-2">
+                    소량단체매출액 {smallGroupSales.amount.toLocaleString()}만원 (비중 {smallGroupSales.percentage}%)
+                  </p>
+                )}
               </div>
               <div className="bg-white p-4 rounded-3xl border border-slate-100 shadow-sm">
                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">전년 대비 신장률</p>
