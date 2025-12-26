@@ -6,6 +6,7 @@ import StoreInfoCard from './components/StoreInfoCard';
 import MonthlySalesTrend from './components/MonthlySalesTrend';
 import StoreBestItems from './components/StoreBestItems';
 import ReportPage from './components/ReportPage';
+import ComparisonInsightCard from './components/ComparisonInsightCard';
 import { convertExcelDataToStoreData } from './utils/storeDataConverter';
 import { analyzeItemSeasonData } from './utils/itemSeasonAnalyzer';
 import storeDataJson from './store_data.json';
@@ -130,6 +131,8 @@ const App: React.FC = () => {
           {selectedData && (
             <>
               <StoreInfoCard store={selectedData.store} />
+              
+              <ComparisonInsightCard targetStore={selectedData} allStores={stores} />
               
               <MonthlySalesTrend selectedStoreName={selectedData.store.name} />
 
