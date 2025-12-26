@@ -1,6 +1,6 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { StoreData } from "../types";
-import { collectComparisonData } from "../utils/similarStoreAnalyzer";
+import { collectComparisonData, getTop3SeasonsBySales } from "../utils/similarStoreAnalyzer";
 import { analyzeItemSeasonData } from "../utils/itemSeasonAnalyzer";
 import storeInventoryDataJson from '../store_inventory_data.json';
 
@@ -64,52 +64,78 @@ export const getComparisonInsights = async (
       : 0;
   });
 
-  // 평균 재고 계산
-  const avgInventory = comparisonData.similarStoresData.length > 0
-    ? comparisonData.similarStoresData.reduce((sum, store) => ({
-        총재고수량: sum.총재고수량 + store.inventory.총재고수량,
-        총재고택가: sum.총재고택가 + store.inventory.총재고택가
-      }), { 총재고수량: 0, 총재고택가: 0 })
-    : { 총재고수량: 0, 총재고택가: 0 };
+  // 타겟 매장의 매출 상위 3개 시즌 찾기
+  const top3Seasons = getTop3SeasonsBySales(targetStore.store.name);
 
-  if (comparisonData.similarStoresData.length > 0) {
-    avgInventory.총재고수량 /= comparisonData.similarStoresData.length;
-    avgInventory.총재고택가 /= comparisonData.similarStoresData.length;
-  }
-
-  // 시즌별 재고 분석 - 재고가 적은 시즌 식별
+  // 시즌별 재고 분석 - 상위 3개 시즌만 비교
   const targetSeasonInventory = comparisonData.targetInventory.시즌별재고 || {};
   const avgSeasonInventory: { [season: string]: number } = {};
   
-  // 유사 매장들의 시즌별 평균 재고 계산
+  // 유사 매장들의 시즌별 평균 재고 계산 (상위 3개 시즌만)
   comparisonData.similarStoresData.forEach(store => {
     const seasonInv = store.inventory.시즌별재고 || {};
-    Object.keys(seasonInv).forEach(season => {
-      if (!avgSeasonInventory[season]) {
-        avgSeasonInventory[season] = 0;
+    top3Seasons.forEach(season => {
+      if (seasonInv[season]) {
+        if (!avgSeasonInventory[season]) {
+          avgSeasonInventory[season] = 0;
+        }
+        avgSeasonInventory[season] += (seasonInv[season].재고금액 || 0) / 10000; // 만원 단위로 변환
       }
-      avgSeasonInventory[season] += (seasonInv[season].재고금액 || 0) / 10000; // 만원 단위로 변환
     });
   });
 
   if (comparisonData.similarStoresData.length > 0) {
-    Object.keys(avgSeasonInventory).forEach(season => {
-      avgSeasonInventory[season] /= comparisonData.similarStoresData.length;
+    top3Seasons.forEach(season => {
+      if (avgSeasonInventory[season] !== undefined) {
+        avgSeasonInventory[season] /= comparisonData.similarStoresData.length;
+      }
     });
   }
 
-  // 재고가 적은 시즌 식별 (타겟 매장의 시즌별 재고가 평균의 50% 미만)
-  const lowInventorySeasons = Object.entries(targetSeasonInventory)
-    .filter(([season, data]: [string, any]) => {
+  // 상위 3개 시즌의 재고만 집계하여 총 재고 계산
+  const top3TotalInventory = { 총재고수량: 0, 총재고택가: 0 };
+  top3Seasons.forEach(season => {
+    const seasonData = targetSeasonInventory[season];
+    if (seasonData) {
+      top3TotalInventory.총재고수량 += seasonData.재고수량 || 0;
+      top3TotalInventory.총재고택가 += seasonData.재고금액 || 0;
+    }
+  });
+
+  // 유사 매장들의 상위 3개 시즌 평균 재고 계산
+  const avgTop3Inventory = { 총재고수량: 0, 총재고택가: 0 };
+  comparisonData.similarStoresData.forEach(store => {
+    const seasonInv = store.inventory.시즌별재고 || {};
+    top3Seasons.forEach(season => {
+      if (seasonInv[season]) {
+        avgTop3Inventory.총재고수량 += seasonInv[season].재고수량 || 0;
+        avgTop3Inventory.총재고택가 += seasonInv[season].재고금액 || 0;
+      }
+    });
+  });
+
+  if (comparisonData.similarStoresData.length > 0) {
+    avgTop3Inventory.총재고수량 /= comparisonData.similarStoresData.length;
+    avgTop3Inventory.총재고택가 /= comparisonData.similarStoresData.length;
+  }
+
+  // 재고가 적은 시즌 식별 (타겟 매장의 시즌별 재고가 평균의 50% 미만, 상위 3개 시즌만)
+  const lowInventorySeasons = top3Seasons
+    .filter(season => {
+      const targetData = targetSeasonInventory[season];
+      if (!targetData) return false;
       const avg = avgSeasonInventory[season] || 0;
-      const target = (data.재고금액 || 0) / 10000; // 만원 단위
+      const target = (targetData.재고금액 || 0) / 10000; // 만원 단위
       return avg > 0 && target < avg * 0.5;
     })
-    .map(([season, data]: [string, any]) => ({
-      season,
-      재고금액: Math.round((data.재고금액 || 0) / 10000),
-      평균재고: Math.round(avgSeasonInventory[season] || 0)
-    }));
+    .map(season => {
+      const targetData = targetSeasonInventory[season];
+      return {
+        season,
+        재고금액: Math.round((targetData.재고금액 || 0) / 10000),
+        평균재고: Math.round(avgSeasonInventory[season] || 0)
+      };
+    });
 
   // 타겟 매장의 상위 10개 아이템 정렬
   const topTargetItems = Object.entries(comparisonData.targetItemSales)
@@ -146,10 +172,10 @@ ${topTargetItems.map(item =>
   `- ${item.item}: 타겟 ${item.sales}만원 vs 평균 ${item.avgSales}만원 (${item.diff >= 0 ? '+' : ''}${item.diff}만원, ${item.diff >= 0 ? '+' : ''}${item.diffPercent}%)`
 ).join('\n')}
 
-【재고 비교】
-- 타겟 매장: 재고수량 ${comparisonData.targetInventory.총재고수량.toLocaleString()}개, 재고택가 ${Math.round(comparisonData.targetInventory.총재고택가 / 10000).toLocaleString()}만원
-- 유사 매장 평균: 재고수량 ${Math.round(avgInventory.총재고수량).toLocaleString()}개, 재고택가 ${Math.round(avgInventory.총재고택가 / 10000).toLocaleString()}만원
-- 재고수량 차이: ${Math.round(comparisonData.targetInventory.총재고수량 - avgInventory.총재고수량).toLocaleString()}개 (${avgInventory.총재고수량 > 0 ? Math.round(((comparisonData.targetInventory.총재고수량 - avgInventory.총재고수량) / avgInventory.총재고수량) * 100 * 10) / 10 : 0}%)
+【재고 비교 (매출 상위 3개 시즌: ${top3Seasons.join(', ')})】
+- 타겟 매장: 재고수량 ${top3TotalInventory.총재고수량.toLocaleString()}개, 재고택가 ${Math.round(top3TotalInventory.총재고택가 / 10000).toLocaleString()}만원
+- 유사 매장 평균: 재고수량 ${Math.round(avgTop3Inventory.총재고수량).toLocaleString()}개, 재고택가 ${Math.round(avgTop3Inventory.총재고택가 / 10000).toLocaleString()}만원
+- 재고수량 차이: ${Math.round(top3TotalInventory.총재고수량 - avgTop3Inventory.총재고수량).toLocaleString()}개 (${avgTop3Inventory.총재고수량 > 0 ? Math.round(((top3TotalInventory.총재고수량 - avgTop3Inventory.총재고수량) / avgTop3Inventory.총재고수량) * 100 * 10) / 10 : 0}%)
 
 ${lowInventorySeasons.length > 0 ? `【재고 부족 시즌】
 ${lowInventorySeasons.map(s => `- ${s.season}: ${s.재고금액}만원 (평균 ${s.평균재고}만원의 ${Math.round((s.재고금액 / s.평균재고) * 100)}%)`).join('\n')}

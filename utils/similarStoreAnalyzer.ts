@@ -110,6 +110,51 @@ export const getStoreItemSales = (storeName: string): { [item: string]: number }
 };
 
 /**
+ * 매장의 시즌별 매출 추출 (11월 기준)
+ */
+export const getStoreSeasonSales = (storeName: string): { [season: string]: number } => {
+  const data = itemSeasonDataJson as any;
+  
+  const storeItems = data.data.filter((item: ItemSeasonData) => {
+    const itemStoreName = item.매장명 || '';
+    const match = itemStoreName.match(/\(([^)]+)\)/);
+    if (match) {
+      return match[1] === storeName;
+    }
+    return itemStoreName === storeName;
+  });
+
+  // 시즌별 11월 판매액 집계
+  const seasonSales: { [season: string]: number } = {};
+  
+  storeItems.forEach((item: ItemSeasonData) => {
+    const season = item.시즌 || '기타';
+    if (!seasonSales[season]) {
+      seasonSales[season] = 0;
+    }
+    
+    // 25년 11월 판매액만 (202511)
+    const monthKey = '202511';
+    seasonSales[season] += item[monthKey] || 0;
+  });
+
+  return seasonSales;
+};
+
+/**
+ * 매장의 매출 상위 3개 시즌 추출
+ */
+export const getTop3SeasonsBySales = (storeName: string): string[] => {
+  const seasonSales = getStoreSeasonSales(storeName);
+  
+  return Object.entries(seasonSales)
+    .filter(([_, sales]) => sales > 0) // 매출이 있는 시즌만
+    .sort(([, a], [, b]) => b - a) // 매출 높은 순으로 정렬
+    .slice(0, 3) // 상위 3개
+    .map(([season]) => season);
+};
+
+/**
  * 매장의 재고 데이터 추출
  */
 export const getStoreInventory = (storeName: string, inventoryData?: any): {
