@@ -117,6 +117,23 @@ const ComparisonInsightCard: React.FC<ComparisonInsightCardProps> = ({
             })}
           </div>
         </div>
+
+        {/* 유사 매장 목록 표시 */}
+        {similarStores.length > 0 && (
+          <div className="mt-4 pt-4 border-t border-white/20">
+            <p className="text-xs font-semibold text-white mb-2">비교 대상 매장 (11월 매출 기준):</p>
+            <div className="flex flex-wrap gap-2">
+              {similarStores.map((store, idx) => (
+                <div 
+                  key={store.store.id} 
+                  className="px-2 py-1 bg-white/20 rounded-lg text-xs text-blue-50"
+                >
+                  {idx + 1}. {store.store.name}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

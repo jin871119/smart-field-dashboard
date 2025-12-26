@@ -159,7 +159,18 @@ const MonthlySalesTrend: React.FC<MonthlySalesTrendProps> = ({ selectedStoreName
               dataKey="신장률" 
               stroke="#f97316" 
               strokeWidth={2} 
-              dot={{ r: 4, fill: '#f97316' }}
+              dot={(props: any) => {
+                const { cx, cy, payload } = props;
+                const isNegative = payload.신장률 < 0;
+                return (
+                  <circle 
+                    cx={cx} 
+                    cy={cy} 
+                    r={4} 
+                    fill={isNegative ? '#ef4444' : '#f97316'} 
+                  />
+                );
+              }}
               name="신장률 (%)"
             />
           </ComposedChart>
