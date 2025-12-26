@@ -115,10 +115,11 @@ export const getStoreItemSales = (storeName: string): { [item: string]: number }
 export const getStoreInventory = (storeName: string, inventoryData?: any): {
   총재고수량: number;
   총재고택가: number;
+  시즌별재고: { [season: string]: { 재고수량: number; 재고금액: number } };
 } => {
   const data = inventoryData || storeInventoryDataJson;
   if (!data || !data.data) {
-    return { 총재고수량: 0, 총재고택가: 0 };
+    return { 총재고수량: 0, 총재고택가: 0, 시즌별재고: {} };
   }
   
   const storeInventories = data.data.filter((item: StoreInventoryData) => {
@@ -135,7 +136,18 @@ export const getStoreInventory = (storeName: string, inventoryData?: any): {
   const 총재고택가 = storeInventories.reduce((sum: number, item: StoreInventoryData) => 
     sum + (item.매장재고택가 || 0), 0);
 
-  return { 총재고수량, 총재고택가 };
+  // 시즌별 재고 집계
+  const 시즌별재고: { [season: string]: { 재고수량: number; 재고금액: number } } = {};
+  storeInventories.forEach((item: StoreInventoryData) => {
+    const season = item.시즌 || '기타';
+    if (!시즌별재고[season]) {
+      시즌별재고[season] = { 재고수량: 0, 재고금액: 0 };
+    }
+    시즌별재고[season].재고수량 += item.매장재고수량 || 0;
+    시즌별재고[season].재고금액 += item.매장재고택가 || 0;
+  });
+
+  return { 총재고수량, 총재고택가, 시즌별재고 };
 };
 
 /**
@@ -151,9 +163,9 @@ export const collectComparisonData = (
     storeName: string;
     revenue: number;
     itemSales: { [item: string]: number };
-    inventory: { 총재고수량: number; 총재고택가: number };
+    inventory: { 총재고수량: number; 총재고택가: number; 시즌별재고: { [season: string]: { 재고수량: number; 재고금액: number } } };
   }>;
-  targetInventory: { 총재고수량: number; 총재고택가: number };
+  targetInventory: { 총재고수량: number; 총재고택가: number; 시즌별재고: { [season: string]: { 재고수량: number; 재고금액: number } } };
 } => {
   const targetItemSales = getStoreItemSales(targetStore.store.name);
   const targetInventory = getStoreInventory(targetStore.store.name, inventoryData);

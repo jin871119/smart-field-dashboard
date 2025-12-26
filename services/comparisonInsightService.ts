@@ -117,6 +117,10 @@ ${topTargetItems.map(item =>
 - 유사 매장 평균: 재고수량 ${Math.round(avgInventory.총재고수량).toLocaleString()}개, 재고택가 ${Math.round(avgInventory.총재고택가 / 10000).toLocaleString()}만원
 - 재고수량 차이: ${Math.round(comparisonData.targetInventory.총재고수량 - avgInventory.총재고수량).toLocaleString()}개 (${avgInventory.총재고수량 > 0 ? Math.round(((comparisonData.targetInventory.총재고수량 - avgInventory.총재고수량) / avgInventory.총재고수량) * 100 * 10) / 10 : 0}%)
 
+${lowInventorySeasons.length > 0 ? `【재고 부족 시즌】
+${lowInventorySeasons.map(s => `- ${s.season}: ${s.재고금액}만원 (평균 ${s.평균재고}만원의 ${Math.round((s.재고금액 / s.평균재고) * 100)}%)`).join('\n')}
+⚠️ 위 시즌들은 유사 매장 대비 재고가 현저히 부족하므로 보충이 필요합니다.` : '【재고 부족 시즌】\n- 없음 (모든 시즌의 재고가 적정 수준입니다)'}
+
 【ITEM별 판매 분석 (백데이터)】
 ${itemSeasonAnalysis.ITEM별요약}
 ${itemSeasonAnalysis.ITEM성장분석}
@@ -132,6 +136,7 @@ ${itemSeasonAnalysis.ITEM성장분석}
 2. 【재고 관리 분석】
    - 재고가 많은 편인지 부족한 편인지 판단
    - 재고 관리의 적정성 평가
+   - 재고가 적은 시즌이 있다면 명시적으로 언급하고 보충 필요성 강조
    - 개선이 필요한 아이템이 있다면 제시
 
 3. 【개선 전략 제안】

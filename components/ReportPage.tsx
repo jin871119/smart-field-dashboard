@@ -263,13 +263,27 @@ const ReportPage: React.FC<ReportPageProps> = ({ selectedStoreName }) => {
       seasonMap[season].재고금액 += item.매장재고택가 || 0;
     });
 
-    return Object.entries(seasonMap)
+    const seasonData = Object.entries(seasonMap)
       .map(([시즌, values]) => ({
         시즌,
         재고수량: values.재고수량,
         재고금액: Math.round(values.재고금액 / 10000) // 만원 단위
       }))
-      .filter(item => item.재고금액 > 0) // 재고금액이 0만원인 항목 제외
+      .filter(item => item.재고금액 > 0); // 재고금액이 0만원인 항목 제외
+
+    // 평균 재고금액 계산
+    const avgInventory = seasonData.length > 0
+      ? seasonData.reduce((sum, item) => sum + item.재고금액, 0) / seasonData.length
+      : 0;
+
+    // 재고가 적은 시즌 식별 (평균의 50% 미만)
+    const lowInventoryThreshold = avgInventory * 0.5;
+    
+    return seasonData
+      .map(item => ({
+        ...item,
+        isLowInventory: item.재고금액 < lowInventoryThreshold
+      }))
       .sort((a, b) => b.재고금액 - a.재고금액);
   }, [inventoryData, selectedStoreName]);
 
@@ -515,22 +529,66 @@ const ReportPage: React.FC<ReportPageProps> = ({ selectedStoreName }) => {
         {isInventoryExpanded && (
           <div className="space-y-3">
             {seasonInventoryData.length > 0 ? (
-              seasonInventoryData.map((season, idx) => (
-                <div key={season.시즌} className="flex items-center justify-between p-3 bg-slate-50 rounded-xl">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-green-100 text-green-600 flex items-center justify-center text-xs font-bold">
-                      {idx + 1}
+              <>
+                {/* 재고가 적은 시즌 경고 */}
+                {seasonInventoryData.filter(s => s.isLowInventory).length > 0 && (
+                  <div className="bg-red-50 border border-red-200 rounded-xl p-3 mb-3">
+                    <div className="flex items-center gap-2 mb-2">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                      </svg>
+                      <p className="text-xs font-bold text-red-700">재고 부족 시즌</p>
                     </div>
-                    <div>
-                      <p className="text-sm font-bold text-slate-900">{season.시즌}</p>
-                      <p className="text-[10px] text-slate-500">{season.재고수량.toLocaleString()}개</p>
+                    <div className="flex flex-wrap gap-2">
+                      {seasonInventoryData
+                        .filter(s => s.isLowInventory)
+                        .map((season) => (
+                          <span key={season.시즌} className="px-2 py-1 bg-red-100 text-red-700 rounded-lg text-xs font-semibold">
+                            {season.시즌} ({season.재고금액.toLocaleString()}만원)
+                          </span>
+                        ))}
                     </div>
                   </div>
-                  <div className="text-right">
-                    <p className="text-sm font-bold text-slate-900">{season.재고금액.toLocaleString()}만원</p>
+                )}
+                
+                {/* 시즌별 재고 목록 */}
+                {seasonInventoryData.map((season, idx) => (
+                  <div 
+                    key={season.시즌} 
+                    className={`flex items-center justify-between p-3 rounded-xl ${
+                      season.isLowInventory 
+                        ? 'bg-red-50 border border-red-200' 
+                        : 'bg-slate-50'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold ${
+                        season.isLowInventory
+                          ? 'bg-red-100 text-red-600'
+                          : 'bg-green-100 text-green-600'
+                      }`}>
+                        {idx + 1}
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm font-bold text-slate-900">{season.시즌}</p>
+                          {season.isLowInventory && (
+                            <span className="px-1.5 py-0.5 bg-red-200 text-red-700 rounded text-[10px] font-bold">
+                              부족
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-[10px] text-slate-500">{season.재고수량.toLocaleString()}개</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className={`text-sm font-bold ${season.isLowInventory ? 'text-red-700' : 'text-slate-900'}`}>
+                        {season.재고금액.toLocaleString()}만원
+                      </p>
+                    </div>
                   </div>
-                </div>
-              ))
+                ))}
+              </>
             ) : (
               <p className="text-xs text-slate-500 text-center py-8">재고 데이터가 없습니다.</p>
             )}
