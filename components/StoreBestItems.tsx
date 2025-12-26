@@ -78,7 +78,7 @@ const StoreBestItems: React.FC<StoreBestItemsProps> = ({ selectedStoreName }) =>
       <div className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100 mb-6">
         <h3 className="text-sm font-bold text-slate-900 mb-4 flex items-center gap-2">
           <div className="w-1.5 h-4 bg-purple-500 rounded-full"></div>
-          매장별 BEST 5 아이템
+          매장별 BEST 5 아이템 <span className="text-xs text-slate-500 font-normal">(11월 기준)</span>
         </h3>
         <p className="text-xs text-slate-500 text-center py-8">데이터가 없습니다.</p>
       </div>
@@ -89,7 +89,7 @@ const StoreBestItems: React.FC<StoreBestItemsProps> = ({ selectedStoreName }) =>
     <div className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100 mb-6">
       <h3 className="text-sm font-bold text-slate-900 mb-4 flex items-center gap-2">
         <div className="w-1.5 h-4 bg-purple-500 rounded-full"></div>
-        매장별 BEST 5 아이템
+        매장별 BEST 5 아이템 <span className="text-xs text-slate-500 font-normal">(11월 기준)</span>
       </h3>
       
       {/* 테이블 헤더 */}

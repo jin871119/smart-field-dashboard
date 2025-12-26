@@ -96,13 +96,14 @@ export const getComparisonInsights = async (
 
 【분석 대상 매장】
 - 매장명: ${targetStore.store.name}
-- 연매출 (1~11월): ${targetStore.yearToDateRevenue?.toLocaleString() || 0}만원
-- 전년 대비 신장률: ${targetStore.growthRate && targetStore.growthRate >= 0 ? '+' : ''}${targetStore.growthRate?.toFixed(1) || 0}%
+- 11월 매출: ${getNovemberRevenueForStore(targetStore.store.name) || 0}만원
 
-【비교 대상 매장들 (매출이 비슷한 매장)】
+【비교 대상 매장들 (11월 매출이 비슷한 매장)】
 ${similarStoresInfo}
 
-【아이템별 판매 비교 (상위 10개)】
+※ 모든 비교 데이터는 2025년 11월 기준입니다.
+
+【아이템별 판매 비교 (11월 기준, 상위 10개)】
 ${topTargetItems.map(item => 
   `- ${item.item}: 타겟 ${item.sales}만원 vs 평균 ${item.avgSales}만원 (${item.diff >= 0 ? '+' : ''}${item.diff}만원, ${item.diff >= 0 ? '+' : ''}${item.diffPercent}%)`
 ).join('\n')}

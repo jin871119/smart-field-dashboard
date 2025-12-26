@@ -78,6 +78,7 @@ const ReportPage: React.FC<ReportPageProps> = ({ selectedStoreName }) => {
   const inventoryData = storeInventoryDataJson as StoreInventoryDataJson;
   const competitorData = competitorDataV2Json as CompetitorDataV2Json;
   const [selectedMonth, setSelectedMonth] = useState<string>('전체');
+  const [isInventoryExpanded, setIsInventoryExpanded] = useState<boolean>(false);
   
   // 선택한 매장의 데이터만 필터링
   const storeData = useMemo(() => {
@@ -493,32 +494,48 @@ const ReportPage: React.FC<ReportPageProps> = ({ selectedStoreName }) => {
 
       {/* 시즌별 재고 상세 정보 */}
       <div className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100">
-        <h3 className="text-sm font-bold text-slate-900 mb-4 flex items-center gap-2">
-          <div className="w-1.5 h-4 bg-green-500 rounded-full"></div>
-          시즌별 재고 상세 정보
-        </h3>
-        <div className="space-y-3">
-          {seasonInventoryData.length > 0 ? (
-            seasonInventoryData.map((season, idx) => (
-              <div key={season.시즌} className="flex items-center justify-between p-3 bg-slate-50 rounded-xl">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-green-100 text-green-600 flex items-center justify-center text-xs font-bold">
-                    {idx + 1}
+        <button
+          onClick={() => setIsInventoryExpanded(!isInventoryExpanded)}
+          className="w-full flex items-center justify-between mb-4"
+        >
+          <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+            <div className="w-1.5 h-4 bg-green-500 rounded-full"></div>
+            시즌별 재고 상세 정보 <span className="text-xs text-slate-500 font-normal">(11월 기준)</span>
+          </h3>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className={`h-5 w-5 text-slate-400 transition-transform ${isInventoryExpanded ? 'rotate-180' : ''}`}
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
+        </button>
+        {isInventoryExpanded && (
+          <div className="space-y-3">
+            {seasonInventoryData.length > 0 ? (
+              seasonInventoryData.map((season, idx) => (
+                <div key={season.시즌} className="flex items-center justify-between p-3 bg-slate-50 rounded-xl">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-green-100 text-green-600 flex items-center justify-center text-xs font-bold">
+                      {idx + 1}
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-slate-900">{season.시즌}</p>
+                      <p className="text-[10px] text-slate-500">{season.재고수량.toLocaleString()}개</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-sm font-bold text-slate-900">{season.시즌}</p>
-                    <p className="text-[10px] text-slate-500">{season.재고수량.toLocaleString()}개</p>
+                  <div className="text-right">
+                    <p className="text-sm font-bold text-slate-900">{season.재고금액.toLocaleString()}만원</p>
                   </div>
                 </div>
-                <div className="text-right">
-                  <p className="text-sm font-bold text-slate-900">{season.재고금액.toLocaleString()}만원</p>
-                </div>
-              </div>
-            ))
-          ) : (
-            <p className="text-xs text-slate-500 text-center py-8">재고 데이터가 없습니다.</p>
-          )}
-        </div>
+              ))
+            ) : (
+              <p className="text-xs text-slate-500 text-center py-8">재고 데이터가 없습니다.</p>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
