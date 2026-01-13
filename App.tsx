@@ -48,12 +48,11 @@ const App: React.FC = () => {
     return Math.round(totalRevenue / 12);
   }, [selectedData]);
 
-  // 전년 대비 신장률 (백데이터 기반)
+  // 전년 대비 신장률 (연매출 데이터 기반)
   const growthRate = useMemo(() => {
     if (!selectedData) return 0;
-    // 백데이터에서 계산한 신장률 사용
-    const itemSeasonAnalysis = analyzeItemSeasonData(selectedData.store.name);
-    return itemSeasonAnalysis.전체신장률 !== undefined ? itemSeasonAnalysis.전체신장률 : (selectedData.growthRate || 0);
+    // performance_data.json에서 계산한 신장률 사용
+    return selectedData.growthRate || 0;
   }, [selectedData]);
 
   // 소량단체매출액 (단체 시트 데이터)
