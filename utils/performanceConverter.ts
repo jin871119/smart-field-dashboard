@@ -90,7 +90,7 @@ export const processPerformanceData = (
   
   // MonthlyPerformance 배열 생성 (1월부터 12월까지)
   const monthlyPerformance: MonthlyPerformance[] = [];
-  let yearToDateRevenue = 0; // 연누계 (1~11월)
+  let yearToDateRevenue = 0; // 연누계 (1~12월)
   let yearToDateLastYear = 0; // 전년 동기 연누계
   
   for (let month = 1; month <= 12; month++) {
@@ -113,11 +113,9 @@ export const processPerformanceData = (
       growthRate: growthRate // 전년 대비 신장률 추가
     });
     
-    // 1~11월만 연누계에 포함 (12월은 진행중이므로 제외)
-    if (month <= 11) {
-      yearToDateRevenue += currentRevenue;
-      yearToDateLastYear += lastYearRevenue;
-    }
+    // 1~12월 연누계에 포함
+    yearToDateRevenue += currentRevenue;
+    yearToDateLastYear += lastYearRevenue;
   }
   
   // 전년 대비 신장률 계산 (연누계 기준)

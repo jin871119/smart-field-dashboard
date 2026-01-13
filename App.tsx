@@ -34,10 +34,19 @@ const App: React.FC = () => {
     return stores.find(s => s.store.id === selectedStoreId) || stores[0];
   }, [selectedStoreId, stores]);
 
-  // 연누계 (1~11월)
+  // 연누계 (1~12월)
   const yearToDateRevenue = useMemo(() => {
     if (!selectedData) return 0;
     return selectedData.yearToDateRevenue || 0;
+  }, [selectedData]);
+
+  // 월평균 (1~12월)
+  const monthlyAverage = useMemo(() => {
+    if (!selectedData || !selectedData.monthlyPerformance) return 0;
+    const totalRevenue = selectedData.yearToDateRevenue || 0;
+    // 실제 데이터가 있는 월만 계산
+    const monthsWithData = selectedData.monthlyPerformance.filter(m => m.revenue > 0).length;
+    return monthsWithData > 0 ? Math.round(totalRevenue / monthsWithData) : 0;
   }, [selectedData]);
 
   // 전년 대비 신장률 (백데이터 기반)
@@ -96,11 +105,16 @@ const App: React.FC = () => {
           {/* Quick Summary Widgets */}
           <div className="grid grid-cols-2 gap-4 mb-6">
               <div className="bg-white p-4 rounded-3xl border border-slate-100 shadow-sm">
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">연매출 (1~11월)</p>
-                <div className="flex items-baseline gap-1 mb-2">
-                    <span className="text-xl font-bold text-slate-900">{yearToDateRevenue.toLocaleString()}</span>
-                    <span className="text-[10px] font-medium text-slate-400">만 원</span>
-                </div>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">연매출 (1~12월)</p>
+                      <div className="flex items-baseline gap-1 mb-2">
+                          <span className="text-xl font-bold text-slate-900">{yearToDateRevenue.toLocaleString()}</span>
+                          <span className="text-[10px] font-medium text-slate-400">만 원</span>
+                      </div>
+                      {monthlyAverage > 0 && (
+                        <p className="text-[10px] text-slate-500 mt-1">
+                          월평균 {monthlyAverage.toLocaleString()}만원
+                        </p>
+                      )}
                 {smallGroupSales.amount > 0 && (
                   <p className="text-[10px] text-slate-500 mt-2 border-t border-slate-100 pt-2">
                     소량단체매출액 {smallGroupSales.amount.toLocaleString()}만원 (비중 {smallGroupSales.percentage}%)
