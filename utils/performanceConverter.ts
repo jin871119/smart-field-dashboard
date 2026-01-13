@@ -39,7 +39,7 @@ export const processPerformanceData = (
   storeName: string
 ): {
   monthlyPerformance: MonthlyPerformance[];
-  yearToDateRevenue: number; // 연누계 (1~11월)
+  yearToDateRevenue: number; // 연누계 (1~12월)
   yearToDateLastYear: number; // 전년 동기 연누계
   growthRate: number; // 전년 대비 신장률
 } => {
