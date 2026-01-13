@@ -53,8 +53,8 @@ def read_competitor_data(file_path, output_json_path):
         stores_data = []
         
         for row_idx in range(4, sheet.max_row + 1):
-            # 백화점 이름 (K열 = 11번째 컬럼)
-            store_name_cell = sheet.cell(row=row_idx, column=11)
+            # 백화점 이름 (L열 = 12번째 컬럼)
+            store_name_cell = sheet.cell(row=row_idx, column=12)
             store_name = store_name_cell.value
             
             # 백화점 이름이 없거나 숫자인 경우 데이터 끝으로 간주
