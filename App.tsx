@@ -44,9 +44,8 @@ const App: React.FC = () => {
   const monthlyAverage = useMemo(() => {
     if (!selectedData || !selectedData.monthlyPerformance) return 0;
     const totalRevenue = selectedData.yearToDateRevenue || 0;
-    // 실제 데이터가 있는 월만 계산
-    const monthsWithData = selectedData.monthlyPerformance.filter(m => m.revenue > 0).length;
-    return monthsWithData > 0 ? Math.round(totalRevenue / monthsWithData) : 0;
+    // 전체 12개월 기준으로 평균 계산
+    return Math.round(totalRevenue / 12);
   }, [selectedData]);
 
   // 전년 대비 신장률 (백데이터 기반)
