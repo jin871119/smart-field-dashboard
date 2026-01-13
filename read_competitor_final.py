@@ -7,7 +7,7 @@ def read_competitor_data(file_path, output_json_path):
         workbook = openpyxl.load_workbook(file_path, data_only=True)
         sheet = workbook['경쟁사']
         
-        # Row 1에서 "월평균(1~11월)" 헤더가 있는 첫 번째 컬럼 찾기
+        # Row 1에서 "월평균" 헤더가 있는 첫 번째 컬럼 찾기 (1~11월 또는 1~12월)
         monthly_avg_start_col = None
         for col_idx in range(1, sheet.max_column + 1):
             header_cell = sheet.cell(row=1, column=col_idx)
@@ -19,7 +19,7 @@ def read_competitor_data(file_path, output_json_path):
             print("월평균 컬럼을 찾을 수 없습니다.")
             return
         
-        print(f"월평균 컬럼 시작: Column {monthly_avg_start_col} (L열)")
+        print(f"월평균 컬럼 시작: Column {monthly_avg_start_col}")
         
         # Row 2에서 브랜드 목록 읽기 (월평균 시작 컬럼부터)
         brands = []
@@ -34,8 +34,8 @@ def read_competitor_data(file_path, output_json_path):
                 if brand_name in seen_brands:
                     continue
                 
-                # 실제 데이터가 있는지 확인 (Row 3에 숫자 값이 있는지)
-                test_cell = sheet.cell(row=3, column=col_idx)
+                # 실제 데이터가 있는지 확인 (Row 4에 숫자 값이 있는지)
+                test_cell = sheet.cell(row=4, column=col_idx)
                 if test_cell.value is not None and isinstance(test_cell.value, (int, float)):
                     brands.append({
                         'column': col_idx,
@@ -49,10 +49,10 @@ def read_competitor_data(file_path, output_json_path):
         
         print(f"발견된 브랜드 ({len(brands)}개): {[b['name'] for b in brands[:10]]}...")
         
-        # 데이터 읽기 (Row 3부터)
+        # 데이터 읽기 (Row 4부터, Row 3은 헤더일 수 있음)
         stores_data = []
         
-        for row_idx in range(3, sheet.max_row + 1):
+        for row_idx in range(4, sheet.max_row + 1):
             # 백화점 이름 (K열 = 11번째 컬럼)
             store_name_cell = sheet.cell(row=row_idx, column=11)
             store_name = store_name_cell.value
