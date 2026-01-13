@@ -169,7 +169,7 @@ export const convertExcelDataToStoreData = (
       store,
       monthlyPerformance,
       itemPerformance,
-      yearToDateRevenue, // 연누계 (1~11월)
+      yearToDateRevenue, // 연누계 (1~12월)
       yearToDateLastYear, // 전년 동기 연누계
       growthRate // 전년 대비 신장률
     };
