@@ -147,7 +147,7 @@ const App: React.FC = () => {
               
               <ComparisonInsightCard targetStore={selectedData} allStores={stores} />
               
-              <MonthlySalesTrend selectedStoreName={selectedData.store.name} />
+              <MonthlySalesTrend monthlyPerformance={selectedData.monthlyPerformance} />
 
               <StoreBestItems selectedStoreName={selectedData.store.name} />
             </>

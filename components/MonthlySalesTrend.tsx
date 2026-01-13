@@ -10,93 +10,32 @@ import {
   Legend,
   CartesianGrid
 } from 'recharts';
-import itemSeasonDataJson from '../item_season_data.json';
-
-interface ItemSeasonData {
-  매장코드: string;
-  매장명: string;
-  ITEM: string;
-  시즌: string;
-  [key: string]: any; // 월별 데이터 (202501, 202502 등)
-}
-
-interface ItemSeasonDataJson {
-  headers: string[];
-  data: ItemSeasonData[];
-  total_rows: number;
-}
+import { MonthlyPerformance } from '../types';
 
 interface MonthlySalesTrendProps {
-  selectedStoreName: string;
+  monthlyPerformance: MonthlyPerformance[];
 }
 
-const MonthlySalesTrend: React.FC<MonthlySalesTrendProps> = ({ selectedStoreName }) => {
-  const data = itemSeasonDataJson as ItemSeasonDataJson;
-
-  // 선택한 매장의 데이터만 필터링
-  const storeData = useMemo(() => {
-    if (!selectedStoreName) {
-      return [];
-    }
-    // 매장명 매칭 (괄호 안의 이름도 고려)
-    return data.data.filter((item) => {
-      const storeName = item.매장명 || '';
-      // 괄호 안의 이름 추출
-      const match = storeName.match(/\(([^)]+)\)/);
-      if (match) {
-        const nameInBracket = match[1];
-        return nameInBracket === selectedStoreName || storeName.includes(selectedStoreName);
-      }
-      return storeName.includes(selectedStoreName) || selectedStoreName.includes(storeName);
-    });
-  }, [data, selectedStoreName]);
-
+const MonthlySalesTrend: React.FC<MonthlySalesTrendProps> = ({ monthlyPerformance }) => {
   // 월별 판매액 추이 (2024년과 2025년 비교)
   const monthlyData = useMemo(() => {
-    const monthlyMap: { [key: string]: { current: number; lastYear: number } } = {};
+    if (!monthlyPerformance || monthlyPerformance.length === 0) {
+      return [];
+    }
 
-    storeData.forEach((item) => {
-      // 2025년 데이터 (202501 ~ 202512)
-      for (let month = 1; month <= 12; month++) {
-        const monthKey = `2025${String(month).padStart(2, '0')}`;
-        const value = item[monthKey] || 0;
-        if (!monthlyMap[monthKey]) {
-          monthlyMap[monthKey] = { current: 0, lastYear: 0 };
-        }
-        monthlyMap[monthKey].current += value || 0;
-      }
-
-      // 2024년 데이터 (202401 ~ 202412)
-      for (let month = 1; month <= 12; month++) {
-        const monthKey = `2024${String(month).padStart(2, '0')}`;
-        const value = item[monthKey] || 0;
-        const currentMonthKey = `2025${String(month).padStart(2, '0')}`;
-        if (!monthlyMap[currentMonthKey]) {
-          monthlyMap[currentMonthKey] = { current: 0, lastYear: 0 };
-        }
-        monthlyMap[currentMonthKey].lastYear += value || 0;
-      }
+    return monthlyPerformance.map((item) => {
+      const 올해 = item.revenue || 0;
+      const 작년 = item.target || 0; // target이 전년 매출
+      const 신장률 = item.growthRate !== undefined ? item.growthRate : (작년 > 0 ? ((올해 - 작년) / 작년) * 100 : 0);
+      
+      return {
+        월: item.month,
+        올해,
+        작년,
+        신장률: Math.round(신장률 * 10) / 10
+      };
     });
-
-    return Object.entries(monthlyMap)
-      .map(([monthKey, values]) => {
-        const month = parseInt(monthKey.substring(4, 6));
-        const 올해 = Math.round(values.current / 10000);
-        const 작년 = Math.round(values.lastYear / 10000);
-        const 신장률 = 작년 > 0 ? ((올해 - 작년) / 작년) * 100 : 0;
-        return {
-          월: `${month}월`,
-          올해,
-          작년,
-          신장률: Math.round(신장률 * 10) / 10
-        };
-      })
-      .sort((a, b) => {
-        const monthA = parseInt(a.월);
-        const monthB = parseInt(b.월);
-        return monthA - monthB;
-      });
-  }, [storeData]);
+  }, [monthlyPerformance]);
 
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
