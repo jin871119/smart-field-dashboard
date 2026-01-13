@@ -361,7 +361,7 @@ const ReportPage: React.FC<ReportPageProps> = ({ selectedStoreName }) => {
             <div className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100">
               <h3 className="text-sm font-bold text-slate-900 mb-4 flex items-center gap-2">
                 <div className="w-1.5 h-4 bg-purple-500 rounded-full"></div>
-                점포별 브랜드 순위 (월평균 1~11월 기준)
+                점포별 브랜드 순위 (월평균 1~12월 기준)
               </h3>
               <p className="text-xs text-slate-500 text-center py-8">
                 선택된 매장의 경쟁사 데이터가 없습니다.

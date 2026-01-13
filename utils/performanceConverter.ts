@@ -43,7 +43,17 @@ export const processPerformanceData = (
   yearToDateLastYear: number; // 전년 동기 연누계
   growthRate: number; // 전년 대비 신장률
 } => {
-  const currentYear = new Date().getFullYear();
+  // performance_data.json에서 실제 데이터 연도 추출
+  let currentYear = new Date().getFullYear();
+  if (performanceDataJson.data && performanceDataJson.data.length > 0) {
+    const firstSalesPoint = performanceDataJson.data[0]?.판매시점;
+    if (firstSalesPoint && typeof firstSalesPoint === 'string' && firstSalesPoint.length >= 4) {
+      const dataYear = parseInt(firstSalesPoint.substring(0, 4));
+      if (dataYear > 2000 && dataYear <= 2100) {
+        currentYear = dataYear; // 데이터에 있는 연도 사용
+      }
+    }
+  }
   const currentMonth = new Date().getMonth() + 1; // 1~12
   
   // 해당 매장의 데이터만 필터링
@@ -56,6 +66,9 @@ export const processPerformanceData = (
   
   storeData.forEach(item => {
     const salesPoint = item.판매시점;
+    if (!salesPoint || typeof salesPoint !== 'string' || salesPoint.length < 6) {
+      return;
+    }
     const year = parseInt(salesPoint.substring(0, 4));
     const month = salesPoint.substring(4, 6);
     const monthKey = month;
