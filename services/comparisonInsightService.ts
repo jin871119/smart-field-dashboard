@@ -35,8 +35,8 @@ export const getComparisonInsights = async (
   // 아이템시즌별판매 데이터 분석
   const itemSeasonAnalysis = analyzeItemSeasonData(targetStore.store.name);
 
-  // 타겟 매장의 11월 매출 계산
-  const targetNovemberRevenue = comparisonData.similarStoresData.find(s => s.storeName === targetStore.store.name)?.revenue || 
+  // 타겟 매장의 12월 매출 계산
+  const targetDecemberRevenue = comparisonData.similarStoresData.find(s => s.storeName === targetStore.store.name)?.revenue || 
     Object.values(comparisonData.targetItemSales).reduce((sum, sales) => sum + Math.round(sales / 10000), 0);
 
   // 유사 매장들의 평균 아이템별 판매액 계산
@@ -160,14 +160,14 @@ export const getComparisonInsights = async (
 
 【분석 대상 매장】
 - 매장명: ${targetStore.store.name}
-- 11월 매출: ${targetNovemberRevenue}만원
+- 12월 매출: ${targetDecemberRevenue}만원
 
-【비교 대상 매장들 (11월 매출이 비슷한 매장)】
+【비교 대상 매장들 (12월 매출이 비슷한 매장)】
 ${similarStoresInfo}
 
-※ 모든 비교 데이터는 2025년 11월 기준입니다.
+※ 모든 비교 데이터는 2025년 12월 기준입니다.
 
-【아이템별 판매 비교 (11월 기준, 상위 10개)】
+【아이템별 판매 비교 (12월 기준, 상위 10개)】
 ${topTargetItems.map(item => 
   `- ${item.item}: 타겟 ${item.sales}만원 vs 평균 ${item.avgSales}만원 (${item.diff >= 0 ? '+' : ''}${item.diff}만원, ${item.diff >= 0 ? '+' : ''}${item.diffPercent}%)`
 ).join('\n')}
