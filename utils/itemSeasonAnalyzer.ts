@@ -1,5 +1,5 @@
 import { StoreData } from '../types';
-import itemSeasonDataJson from '../item_season_data.json';
+// JSON import removed
 
 interface ItemSeasonData {
   매장코드: string;
@@ -21,21 +21,27 @@ interface ItemSeasonData {
 /**
  * 선택한 매장의 아이템시즌별판매 데이터를 분석하여 AI 분석에 포함할 정보를 추출
  */
-export const analyzeItemSeasonData = (storeName: string): {
+export const analyzeItemSeasonData = (storeName: string, itemSeasonData: any): {
   시즌별요약: string;
   ITEM별요약: string;
   반품분석: string;
   월별패턴: string;
-  전체신장률?: number; // 올해와 전년 비교 신장률
-  시즌성장근거?: string; // 시즌별 성장률 계산 근거
-  ITEM성장근거?: string; // ITEM별 성장률 계산 근거
+  전체신장률?: number;
+  시즌성장근거?: string;
+  ITEM성장근거?: string;
+  시즌성장분석?: string;
+  시즌감소분석?: string;
+  ITEM성장분석?: string;
+  ITEM감소분석?: string;
+  최근3개월추이?: string;
 } => {
-  const data = itemSeasonDataJson as any;
-  
+  const data = itemSeasonData;
+
+
   // 매장명 매칭 (정확한 매칭)
   const storeItems = data.data.filter((item: ItemSeasonData) => {
     const itemStoreName = item.매장명 || '';
-    
+
     // 괄호 안의 이름 추출 (예: "29CM(롯데본점)" -> "롯데본점")
     const match = itemStoreName.match(/\(([^)]+)\)/);
     if (match) {
@@ -46,7 +52,7 @@ export const analyzeItemSeasonData = (storeName: string): {
     // 괄호가 없으면 직접 매칭 (예: "갤러리아진주" == "갤러리아진주")
     return itemStoreName === storeName;
   });
-  
+
   // 디버깅: 매칭된 데이터 확인
   if (storeItems.length === 0) {
     console.warn(`[itemSeasonAnalyzer] 매장 "${storeName}"에 대한 데이터를 찾을 수 없습니다.`);
@@ -142,14 +148,14 @@ export const analyzeItemSeasonData = (storeName: string): {
   const seasonGrowthDetails = Object.entries(seasonGrowth)
     .map(([시즌, values]) => {
       const growthRate = values.작년 > 0 ? ((values.올해 - values.작년) / values.작년) * 100 : 0;
-      return { 시즌, 올해: Math.round(values.올해/10000), 작년: Math.round(values.작년/10000), growthRate };
+      return { 시즌, 올해: Math.round(values.올해 / 10000), 작년: Math.round(values.작년 / 10000), growthRate };
     })
     .sort((a, b) => b.올해 - a.올해)
     .slice(0, 5);
 
   const growingSeasons = seasonGrowthDetails.filter(s => s.growthRate > 0);
   const decliningSeasons = seasonGrowthDetails.filter(s => s.growthRate < 0);
-  
+
   // 시즌별 성장률 계산 근거
   const 시즌성장근거 = growingSeasons.length > 0
     ? growingSeasons.map(s => `${s.시즌}: 25년 ${s.올해}만원 vs 24년 ${s.작년}만원 = ${s.growthRate >= 0 ? '+' : ''}${s.growthRate.toFixed(1)}%`).join(' | ')
@@ -177,14 +183,14 @@ export const analyzeItemSeasonData = (storeName: string): {
   const itemGrowthDetails = Object.entries(itemGrowth)
     .map(([ITEM, values]) => {
       const growthRate = values.작년 > 0 ? ((values.올해 - values.작년) / values.작년) * 100 : 0;
-      return { ITEM, 올해: Math.round(values.올해/10000), 작년: Math.round(values.작년/10000), growthRate };
+      return { ITEM, 올해: Math.round(values.올해 / 10000), 작년: Math.round(values.작년 / 10000), growthRate };
     })
     .sort((a, b) => b.올해 - a.올해)
     .slice(0, 5);
 
   const growingItems = itemGrowthDetails.filter(i => i.growthRate > 0);
   const decliningItems = itemGrowthDetails.filter(i => i.growthRate < 0);
-  
+
   // ITEM별 성장률 계산 근거
   const ITEM성장근거 = growingItems.length > 0
     ? growingItems.map(i => `${i.ITEM}: 25년 ${i.올해}만원 vs 24년 ${i.작년}만원 = ${i.growthRate >= 0 ? '+' : ''}${i.growthRate.toFixed(1)}%`).join(' | ')
@@ -201,7 +207,7 @@ export const analyzeItemSeasonData = (storeName: string): {
       const current = storeItems.reduce((sum: number, item: ItemSeasonData) => sum + (item[monthKey] || 0), 0);
       const lastYear = storeItems.reduce((sum: number, item: ItemSeasonData) => sum + (item[lastYearKey] || 0), 0);
       const growth = lastYear > 0 ? ((current - lastYear) / lastYear) * 100 : 0;
-      recentMonths.push({ month: `${month}월`, current: Math.round(current/10000), lastYear: Math.round(lastYear/10000), growth });
+      recentMonths.push({ month: `${month}월`, current: Math.round(current / 10000), lastYear: Math.round(lastYear / 10000), growth });
     }
   }
 
@@ -219,9 +225,9 @@ export const analyzeItemSeasonData = (storeName: string): {
   return {
     시즌별요약: `주요 시즌: ${topSeasons.map(s => `${s.시즌}(${s.판매액}만원)`).join(', ')}`,
     ITEM별요약: `주요 ITEM: ${topItems.map(i => `${i.ITEM}(${i.판매액}만원, ${i.판매수량}건)`).join(', ')}`,
-    반품분석: `반품률: ${반품률.toFixed(1)}% (정상판매 ${Math.round(total정상판매액/10000)}만원, 반품 ${Math.round(total반품판매액/10000)}만원)`,
-    월별패턴: peakMonth ? `2025년 최고 판매월: ${peakMonth[0]} (${Math.round(peakMonth[1]/10000)}만원)` : '월별 데이터 없음',
-    시즌성장분석: growingSeasons.length > 0 
+    반품분석: `반품률: ${반품률.toFixed(1)}% (정상판매 ${Math.round(total정상판매액 / 10000)}만원, 반품 ${Math.round(total반품판매액 / 10000)}만원)`,
+    월별패턴: peakMonth ? `2025년 최고 판매월: ${peakMonth[0]} (${Math.round(peakMonth[1] / 10000)}만원)` : '월별 데이터 없음',
+    시즌성장분석: growingSeasons.length > 0
       ? `성장 시즌: ${growingSeasons.map(s => `${s.시즌}(+${s.growthRate.toFixed(1)}%)`).join(', ')}`
       : '성장하는 시즌 없음',
     시즌감소분석: decliningSeasons.length > 0

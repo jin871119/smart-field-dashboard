@@ -68,3 +68,4 @@ output_json_path = 'group_sales_data.json'
 
 read_group_data(excel_file, output_json_path)
 
+

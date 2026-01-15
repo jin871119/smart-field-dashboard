@@ -40,3 +40,4 @@ print(f"\n기대값: {expected:,.0f}원")
 print(f"계산값: {total_sales:,.0f}원")
 print(f"차이: {abs(total_sales - expected):,.0f}원")
 
+

@@ -28,3 +28,4 @@ for col_idx in range(12, 30):
             print(f"Column {col_idx}: {value} (Row 1: {header1}, Row 2: {header2})")
 
 
+

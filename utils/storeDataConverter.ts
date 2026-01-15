@@ -1,6 +1,6 @@
 import { StoreData, Store, Manager, MonthlyPerformance, ItemPerformance } from '../types';
 import { processPerformanceData } from './performanceConverter';
-import itemSeasonDataJson from '../item_season_data.json';
+// Import removed
 
 // JSON 파일을 동적으로 import하기 위한 타입
 interface ExcelStoreData {
@@ -11,6 +11,8 @@ interface ExcelStoreData {
   '연락처 ': string;
   생년월일: string;
   SM근무시작일: number | string;
+  등급?: string;
+  층수?: string | number;
 }
 
 interface StoreDataJson {
@@ -27,31 +29,32 @@ const koreanSort = (a: string, b: string): number => {
 // Excel 데이터를 StoreData 형식으로 변환
 export const convertExcelDataToStoreData = (
   storeDataJson: StoreDataJson,
-  performanceDataJson?: any
+  performanceDataJson?: any,
+  itemSeasonDataJson?: any // Added
 ): StoreData[] => {
   const excelData = storeDataJson.data;
-  
+
   // 매장명으로 가나다 순 정렬
   const sortedData = [...excelData].sort((a, b) => koreanSort(a.매장명, b.매장명));
-  
+
   return sortedData.map((item, index) => {
     // 매장 ID 생성 (매장명 기반)
     const storeId = `ST-${String(index + 1).padStart(3, '0')}`;
-    
+
     // 연락처 정리 (공백 제거)
     const phone = (item['연락처 '] || '').trim().replace(/\s+/g, '');
-    
+
     // 이메일 생성 (매장명 기반)
     const email = `${item.성명.toLowerCase().replace(/\s+/g, '.')}@retail.com`;
-    
+
     // 아바타 URL 생성 (랜덤 시드 기반)
     const avatarSeed = item.매장명.charCodeAt(0) + (index * 7);
-    
+
     // SM근무시작일을 문자열로 변환
-    const startDate = typeof item.SM근무시작일 === 'number' 
-      ? `${item.SM근무시작일}` 
+    const startDate = typeof item.SM근무시작일 === 'number'
+      ? `${item.SM근무시작일}`
       : item.SM근무시작일;
-    
+
     const store: Store = {
       id: storeId,
       name: item.매장명,
@@ -59,6 +62,8 @@ export const convertExcelDataToStoreData = (
       category: item.형태, // 형태를 category로 사용
       openedDate: startDate,
       py: item.PY, // 평수 추가
+      등급: item.등급, // 등급 추가
+      층수: item.층수, // 층수 추가
       manager: {
         name: item.성명,
         phone: phone,
@@ -69,13 +74,13 @@ export const convertExcelDataToStoreData = (
         startDate: startDate // SM근무시작일 추가
       }
     };
-    
+
     // 실적 데이터가 있으면 사용, 없으면 Mock 데이터 생성
     let monthlyPerformance: MonthlyPerformance[];
     let yearToDateRevenue = 0;
     let yearToDateLastYear = 0;
     let growthRate = 0;
-    
+
     if (performanceDataJson) {
       const performance = processPerformanceData(performanceDataJson, item.매장명);
       monthlyPerformance = performance.monthlyPerformance;
@@ -93,16 +98,19 @@ export const convertExcelDataToStoreData = (
         { month: "6월", revenue: Math.floor(Math.random() * 3000) + 2000, target: 6500 }
       ];
     }
-    
+
     // 백데이터에서 실제 ITEM별 판매 데이터 추출
     const itemPerformance: ItemPerformance[] = (() => {
       const seasonData = itemSeasonDataJson as any;
+
+      if (!seasonData) return []; // 데이터가 없으면 빈 배열
+
       const currentStoreName = item.매장명; // 현재 처리 중인 매장명 (예: "롯데본점")
-      
+
       // 매장명 매칭 (정확한 매칭)
       const storeItems = seasonData.data.filter((seasonItem: any) => {
         const itemStoreName = seasonItem.매장명 || '';
-        
+
         // 괄호 안의 이름 추출 (예: "29CM(롯데본점)" -> "롯데본점")
         const match = itemStoreName.match(/\(([^)]+)\)/);
         if (match) {
@@ -113,13 +121,6 @@ export const convertExcelDataToStoreData = (
         // 괄호가 없으면 직접 매칭 (예: "갤러리아진주" == "갤러리아진주")
         return itemStoreName === currentStoreName;
       });
-      
-      // 디버깅: 매칭된 데이터 확인
-      if (storeItems.length === 0) {
-        console.warn(`[storeDataConverter] 매장 "${currentStoreName}"에 대한 ITEM 데이터를 찾을 수 없습니다.`);
-      } else {
-        console.log(`[storeDataConverter] 매장 "${currentStoreName}"에 대한 ${storeItems.length}개 ITEM 데이터 발견`);
-      }
 
       if (storeItems.length === 0) {
         // 데이터가 없으면 빈 배열 반환
@@ -128,19 +129,19 @@ export const convertExcelDataToStoreData = (
 
       // ITEM별 집계 (25년 1~11월 vs 24년 1~11월)
       const itemMap: { [key: string]: { 올해판매액: number; 작년판매액: number } } = {};
-      
+
       storeItems.forEach((item: any) => {
         const itemCode = item.ITEM || '기타';
         if (!itemMap[itemCode]) {
           itemMap[itemCode] = { 올해판매액: 0, 작년판매액: 0 };
         }
-        
+
         // 올해 판매액 (25년 1~11월) - 월별 데이터 합계
         for (let month = 1; month <= 11; month++) {
           const currentYearKey = `2025${String(month).padStart(2, '0')}`;
           itemMap[itemCode].올해판매액 += item[currentYearKey] || 0;
         }
-        
+
         // 작년 판매액 (24년 1~11월) - 월별 데이터 합계
         for (let month = 1; month <= 11; month++) {
           const lastYearKey = `2024${String(month).padStart(2, '0')}`;
@@ -154,7 +155,7 @@ export const convertExcelDataToStoreData = (
           const growth = values.작년판매액 > 0
             ? ((values.올해판매액 - values.작년판매액) / values.작년판매액) * 100
             : 0;
-          
+
           return {
             name: ITEM,
             sales: sales, // 판매금액 (만원)
@@ -164,7 +165,8 @@ export const convertExcelDataToStoreData = (
         .sort((a, b) => b.sales - a.sales)
         .slice(0, 10); // 상위 10개만
     })();
-    
+
+
     return {
       store,
       monthlyPerformance,

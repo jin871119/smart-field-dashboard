@@ -52,3 +52,4 @@ output_json_path = 'competitor_data.json'
 read_excel_sheet_to_json(excel_file, sheet_name, output_json_path)
 
 
+

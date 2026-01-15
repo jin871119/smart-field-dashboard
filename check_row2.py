@@ -23,3 +23,4 @@ for col_idx in range(1, sheet.max_column + 1):
         print(f"  Row 3 ({store_name}): {row3_cell.value}")
 
 
+

@@ -29,3 +29,4 @@ for col_idx in range(1, min(100, sheet.max_column + 1)):
         print(f"Column {col_idx} ({header1}): {value} (Row 2: {header2})")
 
 
+

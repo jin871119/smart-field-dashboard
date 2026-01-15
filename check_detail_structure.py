@@ -48,3 +48,4 @@ if monthly_avg_cols:
             print(f"  Column {col_idx} ({brand_cell.value}): {value_cell.value}")
 
 
+

@@ -39,3 +39,4 @@ for col_idx, cell in enumerate(sheet[1], 1):
             print(f"    Row {row_idx} ({store_name}): {data_cell.value}")
 
 
+

@@ -89,3 +89,4 @@ output_json_path = 'competitor_data_v2.json'
 read_competitor_data(excel_file, output_json_path)
 
 
+

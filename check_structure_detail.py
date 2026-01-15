@@ -41,3 +41,4 @@ for row_idx in range(3, 13):
     print(f"Row {row_idx}: {store} - {value}")
 
 
+

@@ -52,3 +52,4 @@ for row_idx in range(2, min(100, sheet.max_row + 1)):
                     value = sheet.cell(row=row_idx, column=col_idx).value
                     print(f"    Column {col_idx} ({header1}): {value}")
 
+

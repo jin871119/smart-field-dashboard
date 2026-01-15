@@ -18,3 +18,4 @@ for row_idx in range(2, min(500, sheet.max_row + 1)):
             date_str = str(date_value)
             print(f"  날짜 문자열: {date_str}")
 
+

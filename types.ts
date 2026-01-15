@@ -17,6 +17,8 @@ export interface Store {
   openedDate: string;
   manager: Manager;
   py?: number; // 평수
+  등급?: string; // 등급
+  층수?: string | number; // 층수
 }
 
 export interface MonthlyPerformance {

@@ -24,6 +24,16 @@ const StoreInfoCard: React.FC<StoreInfoCardProps> = ({ store }) => {
                 {store.py}평
               </span>
             )}
+            {store.등급 && (
+              <span className="inline-block px-2 py-0.5 bg-purple-50 text-purple-600 text-[10px] font-semibold rounded">
+                {store.등급}
+              </span>
+            )}
+            {store.층수 && (
+              <span className="inline-block px-2 py-0.5 bg-indigo-50 text-indigo-600 text-[10px] font-semibold rounded">
+                {store.층수}층
+              </span>
+            )}
           </div>
           <h2 className="text-xl font-bold text-slate-900 leading-tight">{store.name}</h2>
           <p className="text-xs text-slate-400 flex items-center mt-1">
