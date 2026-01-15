@@ -20,30 +20,29 @@ interface ComparisonData {
  */
 export const getComparisonInsights = async (
   targetStore: StoreData,
-  similarStores: StoreData[]
+  similarStores: StoreData[],
+  storeInventoryDataJson: any,
+  competitorDataV2Json: any,
+  storeStyleSalesDataJson: any,
+  itemSeasonDataJson: any
 ): Promise<string> => {
+  // Vite에서는 클라이언트 사이드에서 import.meta.env를 사용해야 함
   const apiKey = (import.meta as any).env.VITE_GEMINI_API_KEY || (import.meta as any).env.GEMINI_API_KEY || '';
 
-  // Fetch required data
-  let storeInventoryDataJson, competitorDataV2Json, storeStyleSalesDataJson, itemSeasonDataJson;
-  try {
-    [storeInventoryDataJson, competitorDataV2Json, storeStyleSalesDataJson, itemSeasonDataJson] = await Promise.all([
-      dataService.getStoreInventoryData(),
-      dataService.getCompetitorData(),
-      dataService.getStoreStyleSalesData(),
-      dataService.getItemSeasonData()
-    ]);
-  } catch (error) {
-    console.error("Failed to load data for comparison insights:", error);
-    return "데이터를 불러오는 중 오류가 발생하여 분석을 수행할 수 없습니다.";
-  }
-
   if (!apiKey) {
-    console.warn('API key not found, using local comparison analysis');
-    return generateLocalComparisonInsight(targetStore, similarStores, storeInventoryDataJson, itemSeasonDataJson);
+    console.warn('API key not found, using local AI analysis');
+    return generateLocalComparisonInsight(
+      targetStore,
+      similarStores,
+      storeInventoryDataJson,
+      itemSeasonDataJson
+    );
   }
 
-  // 비교 데이터 수집
+  const genAI = new GoogleGenerativeAI(apiKey);
+
+  // The original `similarStores` parameter is now `allStores` in the signature.
+  // `collectComparisonData` expects `similarStores`, so we use `allStores` here.
   const comparisonData = collectComparisonData(targetStore, similarStores, storeInventoryDataJson, itemSeasonDataJson);
 
   // 아이템시즌별판매 데이터 분석

@@ -17,22 +17,31 @@ const App: React.FC = () => {
   const [performanceData, setPerformanceData] = useState<any>(null);
   const [groupSalesData, setGroupSalesData] = useState<any>(null);
   const [itemSeasonData, setItemSeasonData] = useState<any>(null);
+  const [inventoryData, setInventoryData] = useState<any>(null);
+  const [competitorData, setCompetitorData] = useState<any>(null);
+  const [storeStyleSalesData, setStoreStyleSalesData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [sData, pData, gData, iData] = await Promise.all([
+        const [sData, pData, gData, iData, invData, cData, ssData] = await Promise.all([
           dataService.getStoreData(),
           dataService.getPerformanceData(),
           dataService.getGroupSalesData(),
-          dataService.getItemSeasonData()
+          dataService.getItemSeasonData(),
+          dataService.getStoreInventoryData(),
+          dataService.getCompetitorData(),
+          dataService.getStoreStyleSalesData()
         ]);
         setStoreData(sData);
         setPerformanceData(pData);
         setGroupSalesData(gData);
         setItemSeasonData(iData);
+        setInventoryData(invData);
+        setCompetitorData(cData);
+        setStoreStyleSalesData(ssData);
       } catch (err) {
         console.error("Failed to load initial data", err);
         setError("데이터를 불러오는 중 오류가 발생했습니다.");
@@ -205,10 +214,17 @@ const App: React.FC = () => {
               <ComparisonInsightCard
                 targetStore={selectedData}
                 allStores={stores}
-                itemSeasonData={itemSeasonData} // Added
-              />   <MonthlySalesTrend monthlyPerformance={selectedData.monthlyPerformance} />
+                itemSeasonData={itemSeasonData}
+                inventoryData={inventoryData}
+                competitorData={competitorData}
+                storeStyleSalesData={storeStyleSalesData}
+              />
+              <MonthlySalesTrend monthlyPerformance={selectedData.monthlyPerformance} />
 
-              <StoreBestItems selectedStoreName={selectedData.store.name} />
+              <StoreBestItems
+                selectedStoreName={selectedData.store.name}
+                data={storeStyleSalesData}
+              />
             </>
           )}
 
@@ -220,7 +236,12 @@ const App: React.FC = () => {
           </button>
         </>
       ) : (
-        <ReportPage selectedStoreName={selectedData?.store.name || ''} />
+        <ReportPage
+          selectedStoreName={selectedData?.store.name || ''}
+          data={itemSeasonData}
+          inventoryData={inventoryData}
+          competitorData={competitorData}
+        />
       )}
     </Layout>
   );

@@ -6,13 +6,19 @@ import { getComparisonInsights } from '../services/comparisonInsightService';
 interface ComparisonInsightCardProps {
   targetStore: StoreData;
   allStores: StoreData[];
-  itemSeasonData: any; // Added
+  itemSeasonData: any;
+  inventoryData: any;
+  competitorData: any;
+  storeStyleSalesData: any;
 }
 
 const ComparisonInsightCard: React.FC<ComparisonInsightCardProps> = ({
   targetStore,
   allStores,
-  itemSeasonData // Added
+  itemSeasonData,
+  inventoryData,
+  competitorData,
+  storeStyleSalesData
 }) => {
   const [insight, setInsight] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
@@ -40,7 +46,14 @@ const ComparisonInsightCard: React.FC<ComparisonInsightCardProps> = ({
     setLoading(true);
 
     try {
-      const result = await getComparisonInsights(targetStore, similarStores);
+      const result = await getComparisonInsights(
+        targetStore,
+        similarStores,
+        inventoryData,
+        competitorData,
+        storeStyleSalesData,
+        itemSeasonData
+      );
       setInsight(result);
     } catch (e) {
       console.error('Comparison Insight Error:', e);
@@ -99,8 +112,8 @@ const ComparisonInsightCard: React.FC<ComparisonInsightCardProps> = ({
                   onClick={handleAnalyze}
                   disabled={similarStoresCount === 0}
                   className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${similarStoresCount === 0
-                      ? 'bg-white/10 text-blue-200 cursor-not-allowed'
-                      : 'bg-white text-indigo-600 hover:bg-blue-50 active:scale-95'
+                    ? 'bg-white/10 text-blue-200 cursor-not-allowed'
+                    : 'bg-white text-indigo-600 hover:bg-blue-50 active:scale-95'
                     }`}
                 >
                   <div className="flex items-center gap-2">

@@ -19,14 +19,12 @@ interface StoreStyleSalesDataJson {
 
 interface StoreBestItemsProps {
   selectedStoreName: string;
+  data: StoreStyleSalesDataJson | null;
 }
 
-const StoreBestItems: React.FC<StoreBestItemsProps> = ({ selectedStoreName }) => {
-  const [data, setData] = useState<StoreStyleSalesDataJson | null>(null);
+const StoreBestItems: React.FC<StoreBestItemsProps> = ({ selectedStoreName, data }) => {
+  // useEffect removed as data is passed as prop
 
-  useEffect(() => {
-    dataService.getStoreStyleSalesData().then(setData).catch(console.error);
-  }, []);
 
   // 선택한 매장의 BEST 5 아이템 계산 (품번과 제품명 기준)
   const bestItems = useMemo(() => {

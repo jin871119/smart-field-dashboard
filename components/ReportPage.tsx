@@ -69,38 +69,22 @@ interface CompetitorDataV2Json {
 
 interface ReportPageProps {
   selectedStoreName?: string;
+  data: ItemSeasonDataJson | null;
+  inventoryData: StoreInventoryDataJson | null;
+  competitorData: CompetitorDataV2Json | null;
 }
 
-const ReportPage: React.FC<ReportPageProps> = ({ selectedStoreName }) => {
-  const [data, setData] = useState<ItemSeasonDataJson | null>(null);
-  const [inventoryData, setInventoryData] = useState<StoreInventoryDataJson | null>(null);
-  const [competitorData, setCompetitorData] = useState<CompetitorDataV2Json | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
+const ReportPage: React.FC<ReportPageProps> = ({
+  selectedStoreName,
+  data,
+  inventoryData,
+  competitorData
+}) => {
   const [selectedMonth, setSelectedMonth] = useState<string>('전체');
   const [isInventoryExpanded, setIsInventoryExpanded] = useState<boolean>(false);
 
-  useEffect(() => {
-    const loadData = async () => {
-      try {
-        const [iData, sData, cData] = await Promise.all([
-          dataService.getItemSeasonData(),
-          dataService.getStoreInventoryData(),
-          dataService.getCompetitorData()
-        ]);
-        setData(iData);
-        setInventoryData(sData);
-        setCompetitorData(cData);
-      } catch (err) {
-        console.error("Failed to load report data", err);
-        setError("데이터를 불러오는 중 오류가 발생했습니다.");
-      } finally {
-        setLoading(false);
-      }
-    };
-    loadData();
-  }, []);
+  // Remove useEffect as data is now passed via props
+
 
   // 선택한 매장의 데이터만 필터링
   const storeData = useMemo(() => {
@@ -120,16 +104,13 @@ const ReportPage: React.FC<ReportPageProps> = ({ selectedStoreName }) => {
     });
   }, [data, selectedStoreName]);
 
-  if (loading) {
+  if (!data || !inventoryData || !competitorData) {
     return (
-      <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      <div className="flex flex-col h-64 items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-4"></div>
+        <p className="text-slate-500 text-sm font-medium">리포트 데이터를 불러오는 중입니다...</p>
       </div>
     );
-  }
-
-  if (error || !data || !inventoryData || !competitorData) {
-    return <div className="p-8 text-center text-red-500">{error || "데이터를 불러올 수 없습니다."}</div>;
   }
 
   // 월별 필터 옵션 생성
