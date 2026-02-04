@@ -20,9 +20,9 @@ interface StoreInventoryData {
 }
 
 /**
- * 매장의 12월 매출 추출
+ * 매장의 최신 월(1월) 매출 추출
  */
-const getDecemberRevenue = (storeName: string, itemSeasonData: any): number => {
+const getLatestMonthRevenue = (storeName: string, itemSeasonData: any): number => {
   const data = itemSeasonData;
 
   const storeItems = data.data.filter((item: ItemSeasonData) => {
@@ -34,10 +34,10 @@ const getDecemberRevenue = (storeName: string, itemSeasonData: any): number => {
     return itemStoreName === storeName;
   });
 
-  // 12월 판매액 합계
+  // 1월 판매액 합계
   let totalRevenue = 0;
   storeItems.forEach((item: ItemSeasonData) => {
-    const monthKey = '202512';
+    const monthKey = '202601';
     totalRevenue += item[monthKey] || 0;
   });
 
@@ -45,7 +45,7 @@ const getDecemberRevenue = (storeName: string, itemSeasonData: any): number => {
 };
 
 /**
- * 매출이 비슷한 매장들을 찾기 (±20% 범위 내, 12월 데이터 기준)
+ * 매출이 비슷한 매장들을 찾기 (±20% 범위 내, 1월 데이터 기준)
  */
 export const findSimilarStores = (
   targetStore: StoreData,
@@ -53,8 +53,8 @@ export const findSimilarStores = (
   itemSeasonData: any, // Added
   threshold: number = 0.2 // 20%
 ): StoreData[] => {
-  // 12월 매출 기준으로 비교
-  const targetRevenue = getDecemberRevenue(targetStore.store.name, itemSeasonData);
+  // 1월 매출 기준으로 비교
+  const targetRevenue = getLatestMonthRevenue(targetStore.store.name, itemSeasonData);
 
   // 타겟 매장의 매출이 0이면 유사 매장을 찾을 수 없음
   if (targetRevenue === 0) {
@@ -74,8 +74,8 @@ export const findSimilarStores = (
     // 이미 처리된 매장 제외
     if (storeRevenueMap.has(store.store.id)) return;
 
-    // 12월 매출 기준으로 비교
-    const revenue = getDecemberRevenue(store.store.name, itemSeasonData);
+    // 1월 매출 기준으로 비교
+    const revenue = getLatestMonthRevenue(store.store.name, itemSeasonData);
 
     if (revenue >= minRevenue && revenue <= maxRevenue) {
       const diff = Math.abs(revenue - targetRevenue);
@@ -91,7 +91,7 @@ export const findSimilarStores = (
 };
 
 /**
- * 매장의 아이템별 판매 데이터 추출 (12월 데이터만)
+ * 매장의 아이템별 판매 데이터 추출 (1월 데이터만)
  */
 export const getStoreItemSales = (storeName: string, itemSeasonData: any): { [item: string]: number } => {
   const data = itemSeasonData;
@@ -105,7 +105,7 @@ export const getStoreItemSales = (storeName: string, itemSeasonData: any): { [it
     return itemStoreName === storeName;
   });
 
-  // ITEM별 25년 12월 판매액 집계
+  // ITEM별 26년 1월 판매액 집계
   const itemMap: { [key: string]: number } = {};
 
   storeItems.forEach((item: ItemSeasonData) => {
@@ -114,8 +114,8 @@ export const getStoreItemSales = (storeName: string, itemSeasonData: any): { [it
       itemMap[itemCode] = 0;
     }
 
-    // 25년 12월 판매액만 (202512)
-    const monthKey = '202512';
+    // 26년 1월 판매액만 (202601)
+    const monthKey = '202601';
     itemMap[itemCode] += item[monthKey] || 0;
   });
 
@@ -123,7 +123,7 @@ export const getStoreItemSales = (storeName: string, itemSeasonData: any): { [it
 };
 
 /**
- * 매장의 시즌별 매출 추출 (12월 기준)
+ * 매장의 시즌별 매출 추출 (1월 기준)
  */
 export const getStoreSeasonSales = (storeName: string, itemSeasonData: any): { [season: string]: number } => {
   const data = itemSeasonData;
@@ -146,8 +146,8 @@ export const getStoreSeasonSales = (storeName: string, itemSeasonData: any): { [
       seasonSales[season] = 0;
     }
 
-    // 25년 12월 판매액만 (202512)
-    const monthKey = '202512';
+    // 26년 1월 판매액만 (202601)
+    const monthKey = '202601';
     seasonSales[season] += item[monthKey] || 0;
   });
 
@@ -231,7 +231,7 @@ export const collectComparisonData = (
 
   const similarStoresData = similarStores.map(store => ({
     storeName: store.store.name,
-    revenue: getDecemberRevenue(store.store.name, itemSeasonData), // 12월 매출
+    revenue: getLatestMonthRevenue(store.store.name, itemSeasonData), // 1월 매출
     itemSales: getStoreItemSales(store.store.name, itemSeasonData),
     inventory: getStoreInventory(store.store.name, inventoryData)
   }));
