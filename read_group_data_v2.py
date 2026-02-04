@@ -82,7 +82,7 @@ def read_group_data(file_path, output_json_path):
         traceback.print_exc()
 
 excel_file = 'backdata.xlsx'
-output_json_path = 'group_sales_data.json'
+output_json_path = 'public/data/group_sales_data.json'
 
 read_group_data(excel_file, output_json_path)
 

@@ -84,7 +84,7 @@ def read_competitor_data(file_path, output_json_path):
         traceback.print_exc()
 
 excel_file = 'backdata.xlsx'
-output_json_path = 'competitor_data_v2.json'
+output_json_path = 'public/data/competitor_data_v2.json'
 
 read_competitor_data(excel_file, output_json_path)
 

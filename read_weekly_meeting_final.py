@@ -59,7 +59,7 @@ try:
             'total_rows': len(data)
         }
         
-        output_json_path = 'weekly_meeting_data.json'
+        output_json_path = 'public/data/weekly_meeting_data.json'
         with open(output_json_path, 'w', encoding='utf-8') as f:
             json.dump(result, f, ensure_ascii=False, indent=2)
         

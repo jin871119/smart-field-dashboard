@@ -47,7 +47,7 @@ def read_excel_sheet_to_json(file_path, sheet_name, output_json_path):
 
 excel_file = 'backdata.xlsx'
 sheet_name = '매장별스타일판매'
-output_json_path = 'store_style_sales_data.json'
+output_json_path = 'public/data/store_style_sales_data.json'
 
 read_excel_sheet_to_json(excel_file, sheet_name, output_json_path)
 
