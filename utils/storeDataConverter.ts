@@ -80,13 +80,16 @@ export const convertExcelDataToStoreData = (
     let yearToDateRevenue = 0;
     let yearToDateLastYear = 0;
     let growthRate = 0;
+    let currentYear = new Date().getFullYear();
+    let performance: any = null;
 
     if (performanceDataJson) {
-      const performance = processPerformanceData(performanceDataJson, item.매장명);
+      performance = processPerformanceData(performanceDataJson, item.매장명);
       monthlyPerformance = performance.monthlyPerformance;
       yearToDateRevenue = performance.yearToDateRevenue;
       yearToDateLastYear = performance.yearToDateLastYear;
       growthRate = performance.growthRate;
+      currentYear = performance.currentYear;
     } else {
       // Mock 성과 데이터 생성 (실제 데이터가 없을 때)
       monthlyPerformance = [
@@ -136,15 +139,15 @@ export const convertExcelDataToStoreData = (
           itemMap[itemCode] = { 올해판매액: 0, 작년판매액: 0 };
         }
 
-        // 올해 판매액 (25년 1~11월) - 월별 데이터 합계
-        for (let month = 1; month <= 11; month++) {
-          const currentYearKey = `2025${String(month).padStart(2, '0')}`;
+        // 올해 판매액 (현재 연도) - 월별 데이터 합계
+        for (let month = 1; month <= 12; month++) {
+          const currentYearKey = `${currentYear}${String(month).padStart(2, '0')}`;
           itemMap[itemCode].올해판매액 += item[currentYearKey] || 0;
         }
 
-        // 작년 판매액 (24년 1~11월) - 월별 데이터 합계
-        for (let month = 1; month <= 11; month++) {
-          const lastYearKey = `2024${String(month).padStart(2, '0')}`;
+        // 작년 판매액 (전년도) - 월별 데이터 합계
+        for (let month = 1; month <= 12; month++) {
+          const lastYearKey = `${currentYear - 1}${String(month).padStart(2, '0')}`;
           itemMap[itemCode].작년판매액 += item[lastYearKey] || 0;
         }
       });
@@ -173,7 +176,8 @@ export const convertExcelDataToStoreData = (
       itemPerformance,
       yearToDateRevenue, // 연누계 (1~12월)
       yearToDateLastYear, // 전년 동기 연누계
-      growthRate // 전년 대비 신장률
+      growthRate, // 전년 대비 신장률
+      currentYear: performance?.currentYear || new Date().getFullYear()
     };
   });
 };

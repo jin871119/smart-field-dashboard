@@ -14,10 +14,11 @@ import { MonthlyPerformance } from '../types';
 
 interface MonthlySalesTrendProps {
   monthlyPerformance: MonthlyPerformance[];
+  currentYear?: number;
 }
 
-const MonthlySalesTrend: React.FC<MonthlySalesTrendProps> = ({ monthlyPerformance }) => {
-  // 월별 판매액 추이 (2024년과 2025년 비교)
+const MonthlySalesTrend: React.FC<MonthlySalesTrendProps> = ({ monthlyPerformance, currentYear = 2025 }) => {
+  // 월별 판매액 추이 (올해와 작년 비교)
   const monthlyData = useMemo(() => {
     if (!monthlyPerformance || monthlyPerformance.length === 0) {
       return [];
@@ -27,7 +28,7 @@ const MonthlySalesTrend: React.FC<MonthlySalesTrendProps> = ({ monthlyPerformanc
       const 올해 = item.revenue || 0;
       const 작년 = item.target || 0; // target이 전년 매출
       const 신장률 = item.growthRate !== undefined ? item.growthRate : (작년 > 0 ? ((올해 - 작년) / 작년) * 100 : 0);
-      
+
       return {
         월: item.month,
         올해,
@@ -73,40 +74,40 @@ const MonthlySalesTrend: React.FC<MonthlySalesTrendProps> = ({ monthlyPerformanc
           <ComposedChart data={monthlyData}>
             <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
             <XAxis dataKey="월" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8' }} />
-            <YAxis 
+            <YAxis
               yAxisId="left"
-              axisLine={false} 
-              tickLine={false} 
+              axisLine={false}
+              tickLine={false}
               tick={{ fontSize: 10, fill: '#94a3b8' }}
               label={{ value: '매출 (만원)', angle: -90, position: 'insideLeft', style: { textAnchor: 'middle', fontSize: 10, fill: '#64748b' } }}
             />
-            <YAxis 
+            <YAxis
               yAxisId="right"
               orientation="right"
-              axisLine={false} 
-              tickLine={false} 
+              axisLine={false}
+              tickLine={false}
               tick={{ fontSize: 10, fill: '#f97316' }}
               label={{ value: '신장률 (%)', angle: 90, position: 'insideRight', style: { textAnchor: 'middle', fontSize: 10, fill: '#f97316' } }}
             />
             <Tooltip content={<CustomTooltip />} />
             <Legend />
-            <Bar yAxisId="left" dataKey="올해" fill="#2563eb" radius={[4, 4, 0, 0]} name="2025년 매출 (만원)" />
-            <Bar yAxisId="left" dataKey="작년" fill="#94a3b8" radius={[4, 4, 0, 0]} name="2024년 매출 (만원)" />
-            <Line 
+            <Bar yAxisId="left" dataKey="올해" fill="#2563eb" radius={[4, 4, 0, 0]} name={`${currentYear}년 매출 (만원)`} />
+            <Bar yAxisId="left" dataKey="작년" fill="#94a3b8" radius={[4, 4, 0, 0]} name={`${currentYear - 1}년 매출 (만원)`} />
+            <Line
               yAxisId="right"
-              type="monotone" 
-              dataKey="신장률" 
-              stroke="#f97316" 
-              strokeWidth={2} 
+              type="monotone"
+              dataKey="신장률"
+              stroke="#f97316"
+              strokeWidth={2}
               dot={(props: any) => {
                 const { cx, cy, payload } = props;
                 const isNegative = payload.신장률 < 0;
                 return (
-                  <circle 
-                    cx={cx} 
-                    cy={cy} 
-                    r={4} 
-                    fill={isNegative ? '#ef4444' : '#f97316'} 
+                  <circle
+                    cx={cx}
+                    cy={cy}
+                    r={4}
+                    fill={isNegative ? '#ef4444' : '#f97316'}
                   />
                 );
               }}

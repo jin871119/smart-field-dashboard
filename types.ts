@@ -41,4 +41,5 @@ export interface StoreData {
   yearToDateRevenue?: number; // 연누계 (1~11월)
   yearToDateLastYear?: number; // 전년 동기 연누계
   growthRate?: number; // 전년 대비 신장률 (%)
+  currentYear?: number; // 현재 실적 연도 (예: 2026)
 }

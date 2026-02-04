@@ -42,28 +42,32 @@ export const processPerformanceData = (
   yearToDateRevenue: number; // 연누계 (1~12월)
   yearToDateLastYear: number; // 전년 동기 연누계
   growthRate: number; // 전년 대비 신장률
+  currentYear: number; // 데이터 상의 최신 연도
 } => {
-  // performance_data.json에서 실제 데이터 연도 추출
+  // performance_data.json에서 실제 데이터 연도 추출 (가장 최신 연도 찾기)
   let currentYear = new Date().getFullYear();
   if (performanceDataJson.data && performanceDataJson.data.length > 0) {
-    const firstSalesPoint = performanceDataJson.data[0]?.판매시점;
-    if (firstSalesPoint && typeof firstSalesPoint === 'string' && firstSalesPoint.length >= 4) {
-      const dataYear = parseInt(firstSalesPoint.substring(0, 4));
-      if (dataYear > 2000 && dataYear <= 2100) {
-        currentYear = dataYear; // 데이터에 있는 연도 사용
-      }
+    const years = performanceDataJson.data
+      .map((item: any) => {
+        const salesPoint = item.판매시점;
+        return (salesPoint && typeof salesPoint === 'string') ? parseInt(salesPoint.substring(0, 4)) : 0;
+      })
+      .filter((y: number) => y > 2000 && y <= 2100);
+
+    if (years.length > 0) {
+      currentYear = Math.max(...years);
     }
   }
   const currentMonth = new Date().getMonth() + 1; // 1~12
-  
+
   // 해당 매장의 데이터만 필터링
-  const storeData = performanceDataJson.data.filter(item => 
+  const storeData = performanceDataJson.data.filter(item =>
     matchStoreName(storeName, item.매장명)
   );
-  
+
   // 월별 데이터 정리 (올해와 작년)
   const monthlyData: { [key: string]: { current: number; lastYear: number } } = {};
-  
+
   storeData.forEach(item => {
     const salesPoint = item.판매시점;
     if (!salesPoint || typeof salesPoint !== 'string' || salesPoint.length < 6) {
@@ -72,7 +76,7 @@ export const processPerformanceData = (
     const year = parseInt(salesPoint.substring(0, 4));
     const month = salesPoint.substring(4, 6);
     const monthKey = month;
-    
+
     if (year === currentYear) {
       // 올해 데이터
       if (!monthlyData[monthKey]) {
@@ -87,47 +91,48 @@ export const processPerformanceData = (
       monthlyData[monthKey].lastYear += item.판매액 || 0;
     }
   });
-  
+
   // MonthlyPerformance 배열 생성 (1월부터 12월까지)
   const monthlyPerformance: MonthlyPerformance[] = [];
   let yearToDateRevenue = 0; // 연누계 (1~12월)
   let yearToDateLastYear = 0; // 전년 동기 연누계
-  
+
   for (let month = 1; month <= 12; month++) {
     const monthKey = String(month).padStart(2, '0');
     const data = monthlyData[monthKey] || { current: 0, lastYear: 0 };
-    
+
     // 만원 단위로 변환
     const currentRevenue = Math.round(data.current / 10000);
     const lastYearRevenue = Math.round(data.lastYear / 10000);
-    
+
     // 전년 대비 신장률 계산
-    const growthRate = lastYearRevenue > 0 
-      ? ((currentRevenue - lastYearRevenue) / lastYearRevenue) * 100 
+    const growthRate = lastYearRevenue > 0
+      ? ((currentRevenue - lastYearRevenue) / lastYearRevenue) * 100
       : 0;
-    
+
     monthlyPerformance.push({
       month: formatMonth(`${currentYear}${monthKey}`),
       revenue: currentRevenue,
       target: lastYearRevenue, // target을 전년 매출로 사용
       growthRate: growthRate // 전년 대비 신장률 추가
     });
-    
+
     // 1~12월 연누계에 포함
     yearToDateRevenue += currentRevenue;
     yearToDateLastYear += lastYearRevenue;
   }
-  
+
   // 전년 대비 신장률 계산 (연누계 기준)
   const growthRate = yearToDateLastYear > 0
     ? ((yearToDateRevenue - yearToDateLastYear) / yearToDateLastYear) * 100
     : 0;
-  
+
   return {
     monthlyPerformance,
     yearToDateRevenue,
     yearToDateLastYear,
-    growthRate: Math.round(growthRate * 10) / 10 // 소수점 첫째자리까지
+    growthRate: Math.round(growthRate * 10) / 10, // 소수점 첫째자리까지
+    currentYear
   };
 };
 
