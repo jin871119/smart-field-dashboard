@@ -72,13 +72,15 @@ interface ReportPageProps {
   data: ItemSeasonDataJson | null;
   inventoryData: StoreInventoryDataJson | null;
   competitorData: CompetitorDataV2Json | null;
+  currentYear?: number;
 }
 
 const ReportPage: React.FC<ReportPageProps> = ({
   selectedStoreName,
   data,
   inventoryData,
-  competitorData
+  competitorData,
+  currentYear = 2026
 }) => {
   const [selectedMonth, setSelectedMonth] = useState<string>('전체');
   const [isInventoryExpanded, setIsInventoryExpanded] = useState<boolean>(false);
@@ -128,8 +130,8 @@ const ReportPage: React.FC<ReportPageProps> = ({
 
     if (selectedMonth !== '전체') {
       const monthNum = parseInt(selectedMonth.replace('월', ''));
-      const currentYearKey = `2025${String(monthNum).padStart(2, '0')}`;
-      const lastYearKey = `2024${String(monthNum).padStart(2, '0')}`;
+      const currentYearKey = `${currentYear}${String(monthNum).padStart(2, '0')}`;
+      const lastYearKey = `${currentYear - 1}${String(monthNum).padStart(2, '0')}`;
 
       baseData = storeData.filter((item) => {
         const currentValue = item[currentYearKey] || 0;
@@ -152,14 +154,14 @@ const ReportPage: React.FC<ReportPageProps> = ({
       }
 
       if (selectedMonth === '전체') {
-        // 전체 선택 시: 2025년 월별 데이터 합산 (1~12월)
+        // 전체 선택 시: 올해 월별 데이터 합산 (1~12월)
         for (let month = 1; month <= 12; month++) {
-          const currentYearKey = `2025${String(month).padStart(2, '0')}`;
+          const currentYearKey = `${currentYear}${String(month).padStart(2, '0')}`;
           seasonMap[season].올해정상판매액 += item[currentYearKey] || 0;
         }
-        // 작년 데이터는 월별 데이터에서 집계 (2024년 데이터)
+        // 작년 데이터는 월별 데이터에서 집계
         for (let month = 1; month <= 12; month++) {
-          const lastYearKey = `2024${String(month).padStart(2, '0')}`;
+          const lastYearKey = `${currentYear - 1}${String(month).padStart(2, '0')}`;
           seasonMap[season].작년정상판매액 += item[lastYearKey] || 0;
         }
         // 판매수량은 정확히 계산하기 어려우므로 판매액 기반으로 추정
@@ -167,7 +169,7 @@ const ReportPage: React.FC<ReportPageProps> = ({
           const avgPrice = item.정상_판매택가 / item.정상_판매수량;
           let totalRevenue = 0;
           for (let month = 1; month <= 12; month++) {
-            const currentYearKey = `2025${String(month).padStart(2, '0')}`;
+            const currentYearKey = `${currentYear}${String(month).padStart(2, '0')}`;
             totalRevenue += item[currentYearKey] || 0;
           }
           seasonMap[season].판매수량 += Math.round(totalRevenue / avgPrice);
@@ -178,9 +180,9 @@ const ReportPage: React.FC<ReportPageProps> = ({
         const currentYearKey = `2025${String(monthNum).padStart(2, '0')}`;
         const lastYearKey = `2024${String(monthNum).padStart(2, '0')}`;
 
-        // 올해 정상 판매액 (2025년 해당 월)
+        // 올해 정상 판매액
         seasonMap[season].올해정상판매액 += item[currentYearKey] || 0;
-        // 작년 정상 판매액 (2024년 해당 월)
+        // 작년 정상 판매액
         seasonMap[season].작년정상판매액 += item[lastYearKey] || 0;
         // 판매수량은 정확히 계산하기 어려우므로 판매액 기반으로 추정
         if (item.정상_판매택가 > 0 && item.정상_판매수량 > 0) {
@@ -214,14 +216,14 @@ const ReportPage: React.FC<ReportPageProps> = ({
       }
 
       if (selectedMonth === '전체') {
-        // 전체 선택 시: 2025년 월별 데이터 합산 (1~12월)
+        // 전체 선택 시: 올해 월별 데이터 합산 (1~12월)
         for (let month = 1; month <= 12; month++) {
-          const currentYearKey = `2025${String(month).padStart(2, '0')}`;
+          const currentYearKey = `${currentYear}${String(month).padStart(2, '0')}`;
           itemMap[itemCode].올해정상판매액 += item[currentYearKey] || 0;
         }
-        // 작년 데이터는 월별 데이터에서 집계 (2024년 데이터)
+        // 작년 데이터는 월별 데이터에서 집계
         for (let month = 1; month <= 12; month++) {
-          const lastYearKey = `2024${String(month).padStart(2, '0')}`;
+          const lastYearKey = `${currentYear - 1}${String(month).padStart(2, '0')}`;
           itemMap[itemCode].작년정상판매액 += item[lastYearKey] || 0;
         }
         // 판매수량은 정확히 계산하기 어려우므로 판매액 기반으로 추정
@@ -240,9 +242,9 @@ const ReportPage: React.FC<ReportPageProps> = ({
         const currentYearKey = `2025${String(monthNum).padStart(2, '0')}`;
         const lastYearKey = `2024${String(monthNum).padStart(2, '0')}`;
 
-        // 올해 정상 판매액 (2025년 해당 월)
+        // 올해 정상 판매액
         itemMap[itemCode].올해정상판매액 += item[currentYearKey] || 0;
-        // 작년 정상 판매액 (2024년 해당 월)
+        // 작년 정상 판매액
         itemMap[itemCode].작년정상판매액 += item[lastYearKey] || 0;
         // 판매수량은 정확히 계산하기 어려우므로 판매액 기반으로 추정
         if (item.정상_판매택가 > 0 && item.정상_판매수량 > 0) {
@@ -590,14 +592,14 @@ const ReportPage: React.FC<ReportPageProps> = ({
                 dataKey="올해"
                 fill="#f97316"
                 radius={[6, 6, 0, 0]}
-                name="2025년 정상 판매액 (만원)"
+                name={`${currentYear}년 정상 판매액 (만원)`}
                 maxBarSize={60}
               />
               <Bar
                 dataKey="작년"
                 fill="#94a3b8"
                 radius={[6, 6, 0, 0]}
-                name="2024년 정상 판매액 (만원)"
+                name={`${currentYear - 1}년 정상 판매액 (만원)`}
                 maxBarSize={60}
               />
             </BarChart>

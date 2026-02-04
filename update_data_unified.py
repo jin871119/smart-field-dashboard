@@ -5,7 +5,7 @@ import os
 from datetime import datetime
 
 EXCEL_FILE = 'backdata.xlsx'
-DATA_DIR = 'public/data'
+DATA_DIR = r'c:\Users\AD0883\AI\매장별_외근\public\data'
 
 def format_date(value):
     if isinstance(value, datetime):
@@ -181,25 +181,52 @@ if __name__ == '__main__':
         style_sheet = wb['매장별스타일판매']
         style_headers = [cell.value for cell in style_sheet[1]]
         
-        # Define necessary columns
-        keep_columns = ['매장명', '품번', '제품명', '판매액합계', '일자', '시즌']
-        col_indices = {col: i for i, col in enumerate(style_headers) if col in keep_columns}
+        # Define mapping from possible Excel headers to JSON keys
+        header_mapping = {
+            '매장명': '매장명',
+            '품번': '품번',
+            '제품명': '제품명',
+            '판매액': '판매액합계',
+            '판매액합계': '판매액합계',
+            '판매수량': '판매수량합계',
+            '판매수량합계': '판매수량합계',
+            '일자': '일자',
+            '시즌': '시즌'
+        }
+        
+        # Build col_indices based on available headers
+        col_indices = {}
+        for excel_h, json_h in header_mapping.items():
+            if excel_h in style_headers:
+                col_indices[json_h] = style_headers.index(excel_h)
+        
+        date_idx = style_headers.index('일자') if '일자' in style_headers else -1
+        print(f"DEBUG: col_indices={col_indices}, date_idx={date_idx}")
         
         style_data = []
-        for row in style_sheet.iter_rows(min_row=2, values_only=True):
-            # Only keep data from 2024 onwards
-            date_val = str(row[style_headers.index('일자')]) if '일자' in style_headers else ""
-            if not date_val.startswith('2024') and not date_val.startswith('2025'):
+        for i, row in enumerate(style_sheet.iter_rows(min_row=2, values_only=True)):
+            # If '일자' exists, filter for 2026. Otherwise include all (per user request)
+            include_row = True
+            if date_idx >= 0:
+                val = row[date_idx]
+                try:
+                    v_str = str(val)
+                    if '2026' not in v_str:
+                        include_row = False
+                except:
+                    pass
+            
+            if not include_row:
                 continue
                 
             row_data = {}
-            for col_name, idx in col_indices.items():
-                row_data[col_name] = format_date(row[idx])
+            for json_h, idx in col_indices.items():
+                row_data[json_h] = format_date(row[idx])
             style_data.append(row_data)
             
         with open(os.path.join(DATA_DIR, 'store_style_sales_data.json'), 'w', encoding='utf-8') as f:
             json.dump({
-                'headers': keep_columns,
+                'headers': list(col_indices.keys()),
                 'data': style_data,
                 'total_rows': len(style_data)
             }, f, ensure_ascii=False, indent=2)

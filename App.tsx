@@ -244,6 +244,7 @@ const App: React.FC = () => {
           data={itemSeasonData}
           inventoryData={inventoryData}
           competitorData={competitorData}
+          currentYear={selectedData?.currentYear || 2026}
         />
       )}
     </Layout>
