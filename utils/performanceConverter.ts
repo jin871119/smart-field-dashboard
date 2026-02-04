@@ -39,10 +39,11 @@ export const processPerformanceData = (
   storeName: string
 ): {
   monthlyPerformance: MonthlyPerformance[];
-  yearToDateRevenue: number; // 연누계 (1~12월)
+  yearToDateRevenue: number; // 연누계 (실적이 있는 월 합계)
   yearToDateLastYear: number; // 전년 동기 연누계
   growthRate: number; // 전년 대비 신장률
   currentYear: number; // 데이터 상의 최신 연도
+  activeMonths: number; // 실적이 있는 개월 수 (올해 기준)
 } => {
   // performance_data.json에서 실제 데이터 연도 추출 (가장 최신 연도 찾기)
   let currentYear = new Date().getFullYear();
@@ -117,10 +118,15 @@ export const processPerformanceData = (
       growthRate: growthRate // 전년 대비 신장률 추가
     });
 
-    // 1~12월 연누계에 포함
-    yearToDateRevenue += currentRevenue;
-    yearToDateLastYear += lastYearRevenue;
+    // 올해 실적이 있는 월만 연누계 및 신장률 계산에 포함
+    if (currentRevenue > 0) {
+      yearToDateRevenue += currentRevenue;
+      yearToDateLastYear += lastYearRevenue;
+    }
   }
+
+  // 실적이 있는 개월 수 계산 (올해 데이터 기준)
+  const activeMonths = monthlyPerformance.filter(m => m.revenue > 0).length || 1;
 
   // 전년 대비 신장률 계산 (연누계 기준)
   const growthRate = yearToDateLastYear > 0
@@ -132,7 +138,8 @@ export const processPerformanceData = (
     yearToDateRevenue,
     yearToDateLastYear,
     growthRate: Math.round(growthRate * 10) / 10, // 소수점 첫째자리까지
-    currentYear
+    currentYear,
+    activeMonths
   };
 };
 

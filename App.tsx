@@ -82,8 +82,9 @@ const App: React.FC = () => {
   const monthlyAverage = useMemo(() => {
     if (!selectedData || !selectedData.monthlyPerformance) return 0;
     const totalRevenue = selectedData.yearToDateRevenue || 0;
-    // 전체 12개월 기준으로 평균 계산
-    return Math.round(totalRevenue / 12);
+    // 실적이 있는 개월 수 기준으로 평균 계산
+    const activeMonths = selectedData.activeMonths || 1;
+    return Math.round(totalRevenue / activeMonths);
   }, [selectedData]);
 
   // 전년 대비 신장률 (연매출 데이터 기반)
@@ -171,7 +172,9 @@ const App: React.FC = () => {
           {/* Quick Summary Widgets */}
           <div className="grid grid-cols-2 gap-4 mb-6">
             <div className="bg-white p-4 rounded-3xl border border-slate-100 shadow-sm">
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">연매출 (1~12월)</p>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+                연매출 ({selectedData.activeMonths}개월 누계)
+              </p>
               <div className="flex items-baseline gap-1 mb-2">
                 <span className="text-xl font-bold text-slate-900">{Math.round(yearToDateRevenue / 100).toLocaleString()}</span>
                 <span className="text-[10px] font-medium text-slate-400">백만 원</span>

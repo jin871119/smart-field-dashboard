@@ -81,6 +81,7 @@ export const convertExcelDataToStoreData = (
     let yearToDateLastYear = 0;
     let growthRate = 0;
     let currentYear = new Date().getFullYear();
+    let activeMonths = 1;
     let performance: any = null;
 
     if (performanceDataJson) {
@@ -90,6 +91,7 @@ export const convertExcelDataToStoreData = (
       yearToDateLastYear = performance.yearToDateLastYear;
       growthRate = performance.growthRate;
       currentYear = performance.currentYear;
+      activeMonths = performance.activeMonths;
     } else {
       // Mock 성과 데이터 생성 (실제 데이터가 없을 때)
       monthlyPerformance = [
@@ -177,7 +179,8 @@ export const convertExcelDataToStoreData = (
       yearToDateRevenue, // 연누계 (1~12월)
       yearToDateLastYear, // 전년 동기 연누계
       growthRate, // 전년 대비 신장률
-      currentYear: performance?.currentYear || new Date().getFullYear()
+      currentYear: performance?.currentYear || new Date().getFullYear(),
+      activeMonths: performance?.activeMonths || 1
     };
   });
 };
