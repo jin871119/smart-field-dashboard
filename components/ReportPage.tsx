@@ -11,6 +11,7 @@ import {
   CartesianGrid
 } from 'recharts';
 import { dataService } from '../services/dataService';
+import { getCompetitorSearchNames } from '../utils/competitorStoreMapping';
 
 interface ItemSeasonData {
   매장코드: string;
@@ -215,20 +216,11 @@ const ReportPage: React.FC<ReportPageProps> = ({
         </div>
       )}
 
-      {/* 점포별 브랜드 순위표 */}
-      {competitorData.stores && competitorData.stores.length > 0 && (() => {
-        // 선택된 매장이 있으면 해당 매장만 필터링, 없으면 전체 표시
-        const filteredStores = selectedStoreName
-          ? competitorData.stores.filter((store) => {
-            const storeName = store.백화점 || '';
-            // 정확한 매칭 또는 포함 관계 확인
-            return storeName === selectedStoreName ||
-              storeName.includes(selectedStoreName) ||
-              selectedStoreName.includes(storeName);
-          })
-          : competitorData.stores;
+      {/* 점포별 브랜드 순위표 - 항상 표시 */}
+      {(() => {
+        const stores = competitorData?.stores || [];
 
-        if (filteredStores.length === 0) {
+        if (stores.length === 0) {
           return (
             <div className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100">
               <h3 className="text-sm font-bold text-slate-900 mb-4 flex items-center gap-2">
@@ -236,28 +228,52 @@ const ReportPage: React.FC<ReportPageProps> = ({
                 점포별 브랜드 순위 (월평균 1~12월 기준)
               </h3>
               <p className="text-xs text-slate-500 text-center py-8">
-                선택된 매장의 경쟁사 데이터가 없습니다.
+                경쟁사 데이터가 없습니다. backdata 경쟁사 시트 확인 후 read_competitor_v2_fixed.py를 실행해주세요.
               </p>
             </div>
           );
         }
+
+        // 선택된 매장이 있으면 해당 매장만 필터링, 없으면 전체 표시
+        const filteredStores = selectedStoreName
+          ? stores.filter((store) => {
+            const storeName = (store.백화점 || '').trim();
+            const searchNames = getCompetitorSearchNames(selectedStoreName);
+            return searchNames.some((alias: string) =>
+              storeName === alias ||
+              storeName.includes(alias) ||
+              alias.includes(storeName)
+            );
+          })
+          : stores;
+
+        // 선택된 매장에 매칭되는 데이터가 없으면 전체 목록 표시
+        const displayStores = filteredStores.length > 0 ? filteredStores : stores;
+        const showingFullList = selectedStoreName && filteredStores.length === 0;
 
         return (
           <div className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100">
             <h3 className="text-sm font-bold text-slate-900 mb-4 flex items-center gap-2">
               <div className="w-1.5 h-4 bg-purple-500 rounded-full"></div>
               점포별 브랜드 순위 (월평균 1~12월 기준)
-              {selectedStoreName && (
+              {selectedStoreName && filteredStores.length > 0 && (
                 <span className="text-xs text-slate-500 font-normal ml-2">
                   ({selectedStoreName} 매장)
                 </span>
               )}
+              {showingFullList && (
+                <span className="text-xs text-amber-600 font-normal ml-2">
+                  (선택 매장 데이터 없음 · 전체 {stores.length}개 표시)
+                </span>
+              )}
             </h3>
             <div className="space-y-4 max-h-[800px] overflow-y-auto">
-              {filteredStores.map((store) => {
+              {displayStores.map((store) => {
+                const searchNames = selectedStoreName ? getCompetitorSearchNames(selectedStoreName) : [];
                 const isSelectedStore = selectedStoreName &&
-                  (store.백화점.includes(selectedStoreName) ||
-                    selectedStoreName.includes(store.백화점));
+                  searchNames.some((alias: string) =>
+                    store.백화점.includes(alias) || alias.includes(store.백화점)
+                  );
 
                 // 해당 점포의 브랜드별 데이터를 순위대로 정렬
                 const brandRankings = Object.entries(store.브랜드별_월평균)

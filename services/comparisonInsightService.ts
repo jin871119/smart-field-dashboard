@@ -1,6 +1,7 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { StoreData } from "../types";
 import { collectComparisonData, getTop3SeasonsBySales } from "../utils/similarStoreAnalyzer";
+import { getCompetitorSearchNames } from "../utils/competitorStoreMapping";
 import { analyzeItemSeasonData } from "../utils/itemSeasonAnalyzer";
 import { dataService } from "./dataService";
 
@@ -257,16 +258,20 @@ export const getComparisonInsights = async (
     };
   })();
 
-  // 경쟁사 랭킹 정보 가져오기
+  // 경쟁사 랭킹 정보 가져오기 (매장명-경쟁사명 매핑 지원)
   const getCompetitorRanking = (storeName: string) => {
     const competitorData = competitorDataV2Json as any;
     if (!competitorData.stores) return null;
 
+    const searchNames = getCompetitorSearchNames(storeName);
+
     const storeData = competitorData.stores.find((store: any) => {
-      const storeNameInData = store.백화점 || '';
-      return storeNameInData === storeName ||
-        storeNameInData.includes(storeName) ||
-        storeName.includes(storeNameInData);
+      const storeNameInData = (store.백화점 || '').trim();
+      return searchNames.some((alias: string) =>
+        storeNameInData === alias ||
+        storeNameInData.includes(alias) ||
+        alias.includes(storeNameInData)
+      );
     });
 
     if (!storeData) return null;
@@ -325,91 +330,40 @@ export const getComparisonInsights = async (
     .map(store => `- ${store.storeName}: ${Math.round(store.revenue).toLocaleString()}만원`)
     .join('\n');
 
-  const finalPrompt = `당신은 소매업체의 현장 관리 전문가이자 데이터 분석가입니다. 매출이 비슷한 매장들과의 비교를 통해 해당 매장의 강점과 개선점을 분석해주세요.
+  const finalPrompt = `당신은 소매업체의 현장 관리 전문가입니다. 매출이 비슷한 5개 매장과 비교하여, 경쟁사 실적과 아이템별 실적만 간단히 분석해주세요.
 
-【분석 대상 매장】
-- 매장명: ${targetStore.store.name}
+【분석 대상】
+- 매장: ${targetStore.store.name}
 - 1월 매출: ${targetJanuaryRevenue}만원
 
-【비교 대상 매장들 (1월 매출이 비슷한 매장들)】
+【비교 대상 (유사 5개 매장)】
 ${similarStoresInfo}
 
-※ 모든 비교 데이터는 2026년 1월 기준입니다.
-
-【아이템별 판매 비교 (1월 기준, 상위 10개)】
+【아이템별 판매 실적 (1월 기준, 상위 10개)】
+타겟 매장 vs 유사 매장 평균:
 ${topTargetItems.map(item =>
-    `- ${item.item}: 타겟 ${item.sales}만원 vs 평균 ${item.avgSales}만원 (${item.diff >= 0 ? '+' : ''}${item.diff}만원, ${item.diff >= 0 ? '+' : ''}${item.diffPercent}%)`
+    `- ${item.item}: 타겟 ${item.sales}만원 / 평균 ${item.avgSales}만원 (${item.diff >= 0 ? '+' : ''}${item.diff}만원, ${item.diff >= 0 ? '+' : ''}${item.diffPercent}%)`
   ).join('\n')}
 
-【재고 비교 (매출 상위 3개 시즌: ${top3Seasons.join(', ')})】
-- 타겟 매장: 재고수량 ${top3TotalInventory.총재고수량.toLocaleString()}개, 재고택가 ${Math.round(top3TotalInventory.총재고택가 / 10000).toLocaleString()}만원
-- 유사 매장 평균: 재고수량 ${Math.round(avgTop3Inventory.총재고수량).toLocaleString()}개, 재고택가 ${Math.round(avgTop3Inventory.총재고택가 / 10000).toLocaleString()}만원
-- 재고수량 차이: ${Math.round(top3TotalInventory.총재고수량 - avgTop3Inventory.총재고수량).toLocaleString()}개 (${avgTop3Inventory.총재고수량 > 0 ? Math.round(((top3TotalInventory.총재고수량 - avgTop3Inventory.총재고수량) / avgTop3Inventory.총재고수량) * 100 * 10) / 10 : 0}%)
-
-${lowInventorySeasons.length > 0 ? `【재고 부족 시즌】
-${lowInventorySeasons.map(s => `- ${s.season}: ${s.재고금액}만원 (평균 ${s.평균재고}만원의 ${Math.round((s.재고금액 / s.평균재고) * 100)}%)`).join('\n')}
-⚠️ 위 시즌들은 유사 매장 대비 재고가 현저히 부족하므로 보충이 필요합니다.` : '【재고 부족 시즌】\n- 없음 (모든 시즌의 재고가 적정 수준입니다)'}
-
-【ITEM별 판매 분석 (백데이터)】
-${itemSeasonAnalysis.ITEM별요약}
-${itemSeasonAnalysis.ITEM성장분석}
-
-${targetBestItems.length > 0 ? `【타겟 매장 Best 5 아이템 (품번/제품명 기준)】
-${targetBestItems.map((item, idx) => `${idx + 1}. ${item.품번} (${item.제품명}): ${item.판매금액}만원`).join('\n')}
-
-${bestItemsAnalysis ? `【Best 아이템 비교 분석】
-- 타겟 매장에만 있는 Best 아이템: ${bestItemsAnalysis.targetOnlyItems.length > 0
-          ? bestItemsAnalysis.targetOnlyItems.map(item => `${item.품번} (${item.제품명}, ${item.판매금액}만원)`).join(', ')
-          : '없음'}
-- 유사 매장에서 자주 보이는 Best 아이템 (타겟 매장에는 없음): ${bestItemsAnalysis.similarOnlyItems.length > 0
-          ? bestItemsAnalysis.similarOnlyItems.map(item => `${item.품번} (${item.제품명}, ${item.출현횟수}개 매장, 평균 ${item.평균판매금액}만원)`).join(', ')
-          : '없음'}
-` : ''}
-` : ''}
-
-${targetRanking ? `【경쟁사 랭킹 (월평균 기준)】
-- 타겟 매장 MLB 순위: ${targetRanking.mlb순위 || 'N/A'}위 / ${targetRanking.전체순위}개 브랜드
-- MLB 월평균: ${Math.round(targetRanking.mlb월평균).toLocaleString()}천원
+【경쟁사 랭킹】
+${targetRanking ? `- 타겟 매장 MLB 순위: ${targetRanking.mlb순위 || 'N/A'}위 (전체 ${targetRanking.전체순위}개 브랜드 중)
 ${avgMlbRanking ? `- 유사 매장 평균 MLB 순위: ${avgMlbRanking}위` : ''}
-- 상위 5개 브랜드: ${targetRanking.상위5개브랜드.map(b => `${b.순위}위 ${b.브랜드}`).join(', ')}
-` : ''}
+${rankingComparison ? `- 유사 매장 대비: ${rankingComparison.mlb순위평가 === '우수' ? '우수 (순위가 높음)' : rankingComparison.mlb순위평가 === '부족' ? '부족 (순위가 낮음)' : '평균 수준'}` : ''}` : '- 경쟁사 데이터 없음'}
 
-【분석 요청사항】
-다음 4가지 관점에서 종합적으로 분석해주세요:
+【분석 요청】
+다음 2가지만 간결하게 작성해주세요 (총 300~400자):
 
-1. 【Best 아이템 비교 분석】
-   - 타겟 매장의 Best 5 아이템이 유사 매장과 어떤 차이가 있는지
-   - 어떤 아이템이 유사 매장 대비 잘 팔리고 있는지 (구체적인 품번과 수치)
-   - 어떤 아이템이 유사 매장 대비 부족한지 (개선 기회)
-   - Best 아이템 구성의 강점과 약점
+1. 【경쟁사 대비 실적】
+   - 이 매장은 유사 5개 매장에 비해 경쟁사(백화점 내 MLB 등 브랜드) 대비 실적이 높다/떨어진다/비슷하다.
+   - 구체적인 순위와 수치를 한 줄로 요약.
 
-2. 【아이템별 판매 현황 분석】
-   - 어떤 아이템(ITEM)에서 유사 매장 대비 잘하고 있는지 (상위 3개)
-   - 어떤 아이템에서 유사 매장 대비 부족한지 (하위 3개)
-   - 구체적인 수치와 퍼센트를 포함하여 설명
-   - 잘 팔고 못 파는 아이템의 패턴 분석
-
-3. 【경쟁사 랭킹 비교 분석】
-   ${targetRanking && rankingComparison ? `- 타겟 매장의 MLB 순위: ${targetRanking.mlb순위 || 'N/A'}위 / 유사 매장 평균: ${avgMlbRanking || 'N/A'}위
-   - 순위 차이: ${rankingComparison.mlb순위차이 > 0 ? `${rankingComparison.mlb순위차이}위 낮음` : rankingComparison.mlb순위차이 < 0 ? `${Math.abs(rankingComparison.mlb순위차이)}위 높음` : '동일'}
-   - 평가: ${rankingComparison.mlb순위평가 === '우수' ? '유사 매장 대비 우수' : rankingComparison.mlb순위평가 === '부족' ? '유사 매장 대비 부족' : '평균 수준'}
-   - 경쟁사 랭킹에서의 위치와 개선 방향
-   - 상위 브랜드들과의 격차 분석` : '- 경쟁사 랭킹 데이터 없음'}
-
-4. 【재고 관리 및 개선 전략】
-   - 재고가 많은 편인지 부족한 편인지 판단
-   - 재고 관리의 적정성 평가
-   - 재고가 적은 시즌이 있다면 명시적으로 언급하고 보충 필요성 강조
-   - Best 아이템과 경쟁사 랭킹 분석을 바탕으로 한 구체적인 액션 아이템 2-3가지
-   - 우선순위를 명시
+2. 【아이템별 실적】
+   - 유사 매장 대비 잘 팔리는 아이템 1~2개 (ITEM명, 수치).
+   - 유사 매장 대비 부족한 아이템 1~2개 (ITEM명, 수치).
 
 【작성 형식】
-- 전문적이면서도 이해하기 쉬운 톤
-- 구체적인 수치와 퍼센트, 품번, 브랜드명 언급 필수
-- 실행 가능한 제안
-- 이모지 적절히 사용
-- 총 700-800자 내외
-- 각 섹션을 명확히 구분하여 작성 (【】표시 사용)
+- 짧고 명확하게
+- "경쟁사 대비 실적이 떨어진다", "아이템별로는 BG가 우수하다" 등 핵심만
 `;
 
   try {
@@ -503,49 +457,16 @@ const generateLocalComparisonInsight = (
     .filter(item => item.diffPercent < 0)
     .slice(0, 3);
 
-  // 평균 재고 계산
-  const avgInventory = comparisonData.similarStoresData.length > 0
-    ? comparisonData.similarStoresData.reduce((sum, store) => ({
-      총재고수량: sum.총재고수량 + store.inventory.총재고수량,
-      총재고택가: sum.총재고택가 + store.inventory.총재고택가
-    }), { 총재고수량: 0, 총재고택가: 0 })
-    : { 총재고수량: 0, 총재고택가: 0 };
-
-  if (comparisonData.similarStoresData.length > 0) {
-    avgInventory.총재고수량 /= comparisonData.similarStoresData.length;
-    avgInventory.총재고택가 /= comparisonData.similarStoresData.length;
-  }
-
-  const inventoryDiff = comparisonData.targetInventory.총재고수량 - avgInventory.총재고수량;
-  const inventoryDiffPercent = avgInventory.총재고수량 > 0
-    ? Math.round((inventoryDiff / avgInventory.총재고수량) * 100 * 10) / 10
-    : 0;
-
   const insights: string[] = [];
 
-  insights.push(`【매출이 비슷한 ${similarStores.length}개 매장과 비교 분석】`);
+  insights.push(`【유사 ${similarStores.length}개 매장과 비교】`);
 
   if (bestItems.length > 0) {
-    insights.push(`\n✅ 잘하고 있는 아이템:`);
-    bestItems.forEach(item => {
-      insights.push(`   - ${item.item}: ${item.sales}만원 (평균 ${item.avgSales}만원, +${item.diffPercent}%)`);
-    });
+    insights.push(`\n✅ 경쟁사/아이템 대비 우수: ${bestItems.map(i => `${i.item} (+${i.diffPercent}%)`).join(', ')}`);
   }
 
   if (worstItems.length > 0) {
-    insights.push(`\n⚠️ 개선이 필요한 아이템:`);
-    worstItems.forEach(item => {
-      insights.push(`   - ${item.item}: ${item.sales}만원 (평균 ${item.avgSales}만원, ${item.diffPercent}%)`);
-    });
-  }
-
-  insights.push(`\n📦 재고 현황:`);
-  if (inventoryDiff > 0) {
-    insights.push(`   재고가 평균보다 ${Math.round(inventoryDiff).toLocaleString()}개 많음 (+${inventoryDiffPercent}%)`);
-  } else if (inventoryDiff < 0) {
-    insights.push(`   재고가 평균보다 ${Math.abs(Math.round(inventoryDiff)).toLocaleString()}개 적음 (${inventoryDiffPercent}%)`);
-  } else {
-    insights.push(`   재고가 평균과 비슷한 수준`);
+    insights.push(`\n⚠️ 개선 필요: ${worstItems.map(i => `${i.item} (${i.diffPercent}%)`).join(', ')}`);
   }
 
   return insights.join('\n');
