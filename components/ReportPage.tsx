@@ -52,6 +52,7 @@ interface StoreInventoryDataJson {
 interface CompetitorStoreData {
   백화점: string;
   브랜드별_월평균: { [brandName: string]: number };
+  총매출?: number;
 }
 
 interface BrandRankingItem {
@@ -82,12 +83,6 @@ const ReportPage: React.FC<ReportPageProps> = ({
   competitorData,
   currentYear = 2026
 }) => {
-  const [selectedMonth, setSelectedMonth] = useState<string>('전체');
-  const [isInventoryExpanded, setIsInventoryExpanded] = useState<boolean>(false);
-
-  // Remove useEffect as data is now passed via props
-
-
   // 선택한 매장의 데이터만 필터링
   const storeData = useMemo(() => {
     if (!data || !selectedStoreName) {
@@ -115,80 +110,30 @@ const ReportPage: React.FC<ReportPageProps> = ({
     );
   }
 
-  // 월별 필터 옵션 생성
-  const monthOptions = useMemo(() => {
-    const months = ['전체'];
-    for (let month = 1; month <= 12; month++) {
-      months.push(`${month}월`);
-    }
-    return months;
-  }, []);
-
-  // 선택된 월에 해당하는 데이터 필터링
-  const filteredData = useMemo(() => {
-    let baseData = storeData;
-
-    if (selectedMonth !== '전체') {
-      const monthNum = parseInt(selectedMonth.replace('월', ''));
-      const currentYearKey = `${currentYear}${String(monthNum).padStart(2, '0')}`;
-      const lastYearKey = `${currentYear - 1}${String(monthNum).padStart(2, '0')}`;
-
-      baseData = storeData.filter((item) => {
-        const currentValue = item[currentYearKey] || 0;
-        const lastValue = item[lastYearKey] || 0;
-        return currentValue > 0 || lastValue > 0;
-      });
-    }
-
-    return baseData;
-  }, [storeData, selectedMonth]);
-
-  // 시즌별 데이터 집계 (월별 필터 적용, 정상 판매액만, 전년 대비)
+  // 시즌별 데이터 집계 (연간 합산, 정상 판매액만, 전년 대비)
   const seasonData = useMemo(() => {
     const seasonMap: { [key: string]: { 올해정상판매액: number; 작년정상판매액: number; 판매수량: number } } = {};
 
-    filteredData.forEach((item) => {
+    storeData.forEach((item) => {
       const season = item.시즌 || '기타';
       if (!seasonMap[season]) {
         seasonMap[season] = { 올해정상판매액: 0, 작년정상판매액: 0, 판매수량: 0 };
       }
-
-      if (selectedMonth === '전체') {
-        // 전체 선택 시: 올해 월별 데이터 합산 (1~12월)
+      // 연간 합산 (1~12월)
+      for (let month = 1; month <= 12; month++) {
+        const currentYearKey = `${currentYear}${String(month).padStart(2, '0')}`;
+        const lastYearKey = `${currentYear - 1}${String(month).padStart(2, '0')}`;
+        seasonMap[season].올해정상판매액 += item[currentYearKey] || 0;
+        seasonMap[season].작년정상판매액 += item[lastYearKey] || 0;
+      }
+      if (item.정상_판매택가 > 0 && item.정상_판매수량 > 0) {
+        const avgPrice = item.정상_판매택가 / item.정상_판매수량;
+        let totalRevenue = 0;
         for (let month = 1; month <= 12; month++) {
           const currentYearKey = `${currentYear}${String(month).padStart(2, '0')}`;
-          seasonMap[season].올해정상판매액 += item[currentYearKey] || 0;
+          totalRevenue += item[currentYearKey] || 0;
         }
-        // 작년 데이터는 월별 데이터에서 집계
-        for (let month = 1; month <= 12; month++) {
-          const lastYearKey = `${currentYear - 1}${String(month).padStart(2, '0')}`;
-          seasonMap[season].작년정상판매액 += item[lastYearKey] || 0;
-        }
-        // 판매수량은 정확히 계산하기 어려우므로 판매액 기반으로 추정
-        if (item.정상_판매택가 > 0 && item.정상_판매수량 > 0) {
-          const avgPrice = item.정상_판매택가 / item.정상_판매수량;
-          let totalRevenue = 0;
-          for (let month = 1; month <= 12; month++) {
-            const currentYearKey = `${currentYear}${String(month).padStart(2, '0')}`;
-            totalRevenue += item[currentYearKey] || 0;
-          }
-          seasonMap[season].판매수량 += Math.round(totalRevenue / avgPrice);
-        }
-      } else {
-        // 특정 월 선택 시: 해당 월의 데이터만 사용
-        const monthNum = parseInt(selectedMonth.replace('월', ''));
-        const currentYearKey = `2025${String(monthNum).padStart(2, '0')}`;
-        const lastYearKey = `2024${String(monthNum).padStart(2, '0')}`;
-
-        // 올해 정상 판매액
-        seasonMap[season].올해정상판매액 += item[currentYearKey] || 0;
-        // 작년 정상 판매액
-        seasonMap[season].작년정상판매액 += item[lastYearKey] || 0;
-        // 판매수량은 정확히 계산하기 어려우므로 판매액 기반으로 추정
-        if (item.정상_판매택가 > 0 && item.정상_판매수량 > 0) {
-          const avgPrice = item.정상_판매택가 / item.정상_판매수량;
-          seasonMap[season].판매수량 += Math.round((item[currentYearKey] || 0) / avgPrice);
-        }
+        seasonMap[season].판매수량 += Math.round(totalRevenue / avgPrice);
       }
     });
 
@@ -203,70 +148,8 @@ const ReportPage: React.FC<ReportPageProps> = ({
           : 0
       }))
       .sort((a, b) => b.올해 - a.올해);
-  }, [filteredData, selectedMonth]);
+  }, [storeData, currentYear]);
 
-  // ITEM별 데이터 집계 (월별 필터 적용, 정상 판매액만, 전년 대비)
-  const itemData = useMemo(() => {
-    const itemMap: { [key: string]: { 올해정상판매액: number; 작년정상판매액: number; 판매수량: number } } = {};
-
-    filteredData.forEach((item) => {
-      const itemCode = item.ITEM || '기타';
-      if (!itemMap[itemCode]) {
-        itemMap[itemCode] = { 올해정상판매액: 0, 작년정상판매액: 0, 판매수량: 0 };
-      }
-
-      if (selectedMonth === '전체') {
-        // 전체 선택 시: 올해 월별 데이터 합산 (1~12월)
-        for (let month = 1; month <= 12; month++) {
-          const currentYearKey = `${currentYear}${String(month).padStart(2, '0')}`;
-          itemMap[itemCode].올해정상판매액 += item[currentYearKey] || 0;
-        }
-        // 작년 데이터는 월별 데이터에서 집계
-        for (let month = 1; month <= 12; month++) {
-          const lastYearKey = `${currentYear - 1}${String(month).padStart(2, '0')}`;
-          itemMap[itemCode].작년정상판매액 += item[lastYearKey] || 0;
-        }
-        // 판매수량은 정확히 계산하기 어려우므로 판매액 기반으로 추정
-        if (item.정상_판매택가 > 0 && item.정상_판매수량 > 0) {
-          const avgPrice = item.정상_판매택가 / item.정상_판매수량;
-          let totalRevenue = 0;
-          for (let month = 1; month <= 12; month++) {
-            const currentYearKey = `2025${String(month).padStart(2, '0')}`;
-            totalRevenue += item[currentYearKey] || 0;
-          }
-          itemMap[itemCode].판매수량 += Math.round(totalRevenue / avgPrice);
-        }
-      } else {
-        // 특정 월 선택 시: 해당 월의 데이터만 사용
-        const monthNum = parseInt(selectedMonth.replace('월', ''));
-        const currentYearKey = `2025${String(monthNum).padStart(2, '0')}`;
-        const lastYearKey = `2024${String(monthNum).padStart(2, '0')}`;
-
-        // 올해 정상 판매액
-        itemMap[itemCode].올해정상판매액 += item[currentYearKey] || 0;
-        // 작년 정상 판매액
-        itemMap[itemCode].작년정상판매액 += item[lastYearKey] || 0;
-        // 판매수량은 정확히 계산하기 어려우므로 판매액 기반으로 추정
-        if (item.정상_판매택가 > 0 && item.정상_판매수량 > 0) {
-          const avgPrice = item.정상_판매택가 / item.정상_판매수량;
-          itemMap[itemCode].판매수량 += Math.round((item[currentYearKey] || 0) / avgPrice);
-        }
-      }
-    });
-
-    return Object.entries(itemMap)
-      .map(([ITEM, values]) => ({
-        ITEM,
-        올해: Math.round(values.올해정상판매액 / 10000),
-        작년: Math.round(values.작년정상판매액 / 10000),
-        판매수량: values.판매수량,
-        성장률: values.작년정상판매액 > 0
-          ? ((values.올해정상판매액 - values.작년정상판매액) / values.작년정상판매액) * 100
-          : 0
-      }))
-      .sort((a, b) => b.올해 - a.올해)
-      .slice(0, 10); // 상위 10개만 표시
-  }, [filteredData, selectedMonth]);
 
   // 브랜드별 순위 데이터 (중복 제거된 브랜드 목록)
   const uniqueBrands = useMemo(() => {
@@ -275,59 +158,6 @@ const ReportPage: React.FC<ReportPageProps> = ({
     return Array.from(new Set(competitorData.brands));
   }, [competitorData]);
 
-  // 시즌별 재고 데이터 집계
-  const seasonInventoryData = useMemo(() => {
-    if (!selectedStoreName) {
-      return [];
-    }
-
-    // 선택한 매장의 재고 데이터만 필터링
-    const storeInventory = inventoryData.data.filter((item) => {
-      const storeName = item.매장명 || '';
-      // 괄호 안의 이름 추출
-      const match = storeName.match(/\(([^)]+)\)/);
-      if (match) {
-        const nameInBracket = match[1];
-        return nameInBracket === selectedStoreName || storeName.includes(selectedStoreName);
-      }
-      return storeName.includes(selectedStoreName) || selectedStoreName.includes(storeName);
-    });
-
-    // 시즌별로 집계
-    const seasonMap: { [key: string]: { 재고수량: number; 재고금액: number } } = {};
-
-    storeInventory.forEach((item) => {
-      const season = item.시즌 || '기타';
-      if (!seasonMap[season]) {
-        seasonMap[season] = { 재고수량: 0, 재고금액: 0 };
-      }
-      seasonMap[season].재고수량 += item.매장재고수량 || 0;
-      seasonMap[season].재고금액 += item.매장재고택가 || 0;
-    });
-
-    const seasonData = Object.entries(seasonMap)
-      .map(([시즌, values]) => ({
-        시즌,
-        재고수량: values.재고수량,
-        재고금액: Math.round(values.재고금액 / 10000) // 만원 단위
-      }))
-      .filter(item => item.재고금액 > 0); // 재고금액이 0만원인 항목 제외
-
-    // 평균 재고금액 계산
-    const avgInventory = seasonData.length > 0
-      ? seasonData.reduce((sum, item) => sum + item.재고금액, 0) / seasonData.length
-      : 0;
-
-    // 재고가 적은 시즌 식별 (평균의 50% 미만)
-    const lowInventoryThreshold = avgInventory * 0.5;
-
-    return seasonData
-      .map(item => ({
-        ...item,
-        isLowInventory: item.재고금액 < lowInventoryThreshold
-      }))
-      .sort((a, b) => b.재고금액 - a.재고금액);
-  }, [inventoryData, selectedStoreName]);
 
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
@@ -384,28 +214,6 @@ const ReportPage: React.FC<ReportPageProps> = ({
           </div>
         </div>
       )}
-
-      {/* 월별 필터 */}
-      <div className="bg-white rounded-3xl p-4 shadow-sm border border-slate-100">
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="text-sm font-bold text-slate-900">월별 필터</h3>
-          <span className="text-xs text-slate-500">{filteredData.length}개 데이터</span>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {monthOptions.map((month) => (
-            <button
-              key={month}
-              onClick={() => setSelectedMonth(month)}
-              className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all ${selectedMonth === month
-                ? 'bg-blue-600 text-white shadow-md'
-                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                }`}
-            >
-              {month}
-            </button>
-          ))}
-        </div>
-      </div>
 
       {/* 점포별 브랜드 순위표 */}
       {competitorData.stores && competitorData.stores.length > 0 && (() => {
@@ -498,6 +306,22 @@ const ReportPage: React.FC<ReportPageProps> = ({
                           </tr>
                         </thead>
                         <tbody>
+                          {/* 총매출 표시 (데이터가 있는 경우) */}
+                          {store.총매출 !== undefined && store.총매출 > 0 && (
+                            <tr className="bg-slate-100 border-b border-slate-200">
+                              <td className="px-4 py-2 text-xs font-bold text-slate-500">
+                                -
+                              </td>
+                              <td className="px-4 py-2">
+                                <span className="text-xs font-bold text-slate-700">전체 매출 (점 합계)</span>
+                              </td>
+                              <td className="px-4 py-2 text-right">
+                                <span className="text-xs font-bold text-slate-900">
+                                  {Math.round(store.총매출).toLocaleString()}
+                                </span>
+                              </td>
+                            </tr>
+                          )}
                           {brandRankings.map((item) => {
                             const isMLB = item.브랜드 === 'MLB';
                             return (
@@ -546,154 +370,7 @@ const ReportPage: React.FC<ReportPageProps> = ({
         );
       })()}
 
-      {/* ITEM별 판매 현황 */}
-      <div className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-            <div className="w-1.5 h-4 bg-orange-500 rounded-full"></div>
-            ITEM별 판매 현황
-          </h3>
-          <span className="text-xs text-slate-500 font-medium">상위 10개 아이템</span>
-        </div>
-        <div className="h-96 w-full">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart
-              data={itemData}
-              margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
-            >
-              <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
-              <XAxis
-                dataKey="ITEM"
-                axisLine={false}
-                tickLine={false}
-                tick={{ fontSize: 11, fill: '#64748b', fontWeight: 500 }}
-                angle={-45}
-                textAnchor="end"
-                height={80}
-                interval={0}
-              />
-              <YAxis
-                axisLine={false}
-                tickLine={false}
-                tick={{ fontSize: 11, fill: '#64748b', fontWeight: 500 }}
-                tickFormatter={(value) => `${value.toLocaleString()}`}
-                width={60}
-              />
-              <Tooltip
-                content={<CustomTooltip />}
-                cursor={{ fill: 'rgba(249, 115, 22, 0.1)' }}
-              />
-              <Legend
-                wrapperStyle={{ paddingTop: '20px' }}
-                iconType="rect"
-                iconSize={12}
-              />
-              <Bar
-                dataKey="올해"
-                fill="#f97316"
-                radius={[6, 6, 0, 0]}
-                name={`${currentYear}년 정상 판매액 (만원)`}
-                maxBarSize={60}
-              />
-              <Bar
-                dataKey="작년"
-                fill="#94a3b8"
-                radius={[6, 6, 0, 0]}
-                name={`${currentYear - 1}년 정상 판매액 (만원)`}
-                maxBarSize={60}
-              />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
 
-      {/* 시즌별 재고 상세 정보 */}
-      <div className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100">
-        <button
-          onClick={() => setIsInventoryExpanded(!isInventoryExpanded)}
-          className="w-full flex items-center justify-between mb-4"
-        >
-          <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-            <div className="w-1.5 h-4 bg-green-500 rounded-full"></div>
-            시즌별 재고 상세 정보 <span className="text-xs text-slate-500 font-normal">(11월 기준)</span>
-          </h3>
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            className={`h-5 w-5 text-slate-400 transition-transform ${isInventoryExpanded ? 'rotate-180' : ''}`}
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-          </svg>
-        </button>
-        {isInventoryExpanded && (
-          <div className="space-y-3">
-            {seasonInventoryData.length > 0 ? (
-              <>
-                {/* 재고가 적은 시즌 경고 */}
-                {seasonInventoryData.filter(s => s.isLowInventory).length > 0 && (
-                  <div className="bg-red-50 border border-red-200 rounded-xl p-3 mb-3">
-                    <div className="flex items-center gap-2 mb-2">
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                      </svg>
-                      <p className="text-xs font-bold text-red-700">재고 부족 시즌</p>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      {seasonInventoryData
-                        .filter(s => s.isLowInventory)
-                        .map((season) => (
-                          <span key={season.시즌} className="px-2 py-1 bg-red-100 text-red-700 rounded-lg text-xs font-semibold">
-                            {season.시즌} ({season.재고금액.toLocaleString()}만원)
-                          </span>
-                        ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* 시즌별 재고 목록 */}
-                {seasonInventoryData.map((season, idx) => (
-                  <div
-                    key={season.시즌}
-                    className={`flex items-center justify-between p-3 rounded-xl ${season.isLowInventory
-                      ? 'bg-red-50 border border-red-200'
-                      : 'bg-slate-50'
-                      }`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold ${season.isLowInventory
-                        ? 'bg-red-100 text-red-600'
-                        : 'bg-green-100 text-green-600'
-                        }`}>
-                        {idx + 1}
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <p className="text-sm font-bold text-slate-900">{season.시즌}</p>
-                          {season.isLowInventory && (
-                            <span className="px-1.5 py-0.5 bg-red-200 text-red-700 rounded text-[10px] font-bold">
-                              부족
-                            </span>
-                          )}
-                        </div>
-                        <p className="text-[10px] text-slate-500">{season.재고수량.toLocaleString()}개</p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <p className={`text-sm font-bold ${season.isLowInventory ? 'text-red-700' : 'text-slate-900'}`}>
-                        {season.재고금액.toLocaleString()}만원
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </>
-            ) : (
-              <p className="text-xs text-slate-500 text-center py-8">재고 데이터가 없습니다.</p>
-            )}
-          </div>
-        )}
-      </div>
     </div>
   );
 };

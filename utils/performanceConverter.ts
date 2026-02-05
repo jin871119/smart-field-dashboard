@@ -15,14 +15,23 @@ interface PerformanceDataJson {
 
 // 매장명 매칭 함수 (매장정보의 매장명과 실적 데이터의 매장명 매칭)
 const matchStoreName = (storeName: string, performanceStoreName: string): boolean => {
-  // "롯데본점"과 "29CM(롯데본점)" 매칭
-  // 괄호 안의 이름 추출
+  // 1. Exact match
+  if (storeName === performanceStoreName) return true;
+
+  // 2. Handle bracket variants like "29CM(롯데본점)"
   const match = performanceStoreName.match(/\(([^)]+)\)/);
   if (match) {
     const nameInBracket = match[1];
-    return nameInBracket === storeName || performanceStoreName.includes(storeName);
+    if (nameInBracket === storeName) return true;
   }
-  return performanceStoreName.includes(storeName) || storeName.includes(performanceStoreName);
+
+  // 3. Fallback for known sub-store cases, but avoid '현대울산' matching '현대울산동구'
+  // If performanceStoreName is longer than storeName, it might be a sub-store or tagged name
+  // but we should avoid generic '현대울산' taking '현대울산동구' data.
+  if (storeName === '현대울산' && performanceStoreName === '현대울산동구') return false;
+  if (storeName === '현대울산동구' && performanceStoreName === '현대울산') return false;
+
+  return performanceStoreName === storeName;
 };
 
 // 판매시점(YYYYMM)을 월 문자열로 변환

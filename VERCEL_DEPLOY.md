@@ -92,3 +92,38 @@ npm run build
 
 **라우팅 오류 시:**
 - `vercel.json` 파일의 rewrites 설정 확인
+
+### "Detected linked project does not have id" 오류 발생 시
+
+1. **프로젝트 폴더의 `.vercel` 폴더를 수동으로 삭제**
+   - 경로: `C:\Users\AD0883\AI\매장별_외근\.vercel`
+   - 탐색기에서 해당 폴더 삭제 (숨김 폴더 표시 켜기)
+
+2. **그래도 오류가 나면 → 웹 대시보드로 배포**
+   - 위 "옵션 1: Vercel 웹 대시보드" 방법 사용
+   - GitHub에 푸시 후 vercel.com에서 프로젝트 import
+
+### 한글 사용자명으로 `vercel login` 오류 발생 시
+
+Windows 사용자명이 한글(예: 윤진영)이면 다음 오류가 날 수 있습니다:
+```
+TypeError: 윤진영 @ vercel ... is not a legal HTTP header value
+```
+
+**해결: 토큰으로 배포 (CLI 로그인 우회)**
+
+1. **토큰 생성**
+   - https://vercel.com/account/tokens 접속
+   - "Create" 클릭 → 토큰 이름 입력 → "Create Token"
+   - 생성된 토큰을 복사 (한 번만 표시됨)
+
+2. **토큰으로 배포**
+   ```bash
+   vercel --token 위에서_복사한_토큰 --prod --yes
+   ```
+
+3. **또는 환경 변수로 설정**
+   ```bash
+   set VERCEL_TOKEN=위에서_복사한_토큰
+   vercel --prod --yes
+   ```

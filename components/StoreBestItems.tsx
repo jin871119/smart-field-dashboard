@@ -32,16 +32,24 @@ const StoreBestItems: React.FC<StoreBestItemsProps> = ({ selectedStoreName, data
       return [];
     }
 
-    // 매장명 매칭 (괄호 안의 이름도 고려)
     const storeItems = data.data.filter((item: StoreStyleSalesData) => {
-      const storeName = item.매장명 || '';
-      // 괄호 안의 이름 추출
-      const match = storeName.match(/\(([^)]+)\)/);
+      const itemStoreName = item.매장명 || '';
+
+      // 1. Exact match
+      if (itemStoreName === selectedStoreName) return true;
+
+      // 2. Handle bracket variants like "29CM(롯데본점)"
+      const match = itemStoreName.match(/\(([^)]+)\)/);
       if (match) {
         const nameInBracket = match[1];
-        return nameInBracket === selectedStoreName || storeName.includes(selectedStoreName);
+        if (nameInBracket === selectedStoreName) return true;
       }
-      return storeName.includes(selectedStoreName) || selectedStoreName.includes(storeName);
+
+      // 3. Fallback for known sub-store cases, but avoid '현대울산' matching '현대울산동구'
+      if (selectedStoreName === '현대울산' && itemStoreName === '현대울산동구') return false;
+      if (selectedStoreName === '현대울산동구' && itemStoreName === '현대울산') return false;
+
+      return itemStoreName === selectedStoreName;
     });
 
     if (storeItems.length === 0) {

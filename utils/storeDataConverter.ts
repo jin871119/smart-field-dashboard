@@ -112,18 +112,23 @@ export const convertExcelDataToStoreData = (
 
       const currentStoreName = item.매장명; // 현재 처리 중인 매장명 (예: "롯데본점")
 
-      // 매장명 매칭 (정확한 매칭)
       const storeItems = seasonData.data.filter((seasonItem: any) => {
         const itemStoreName = seasonItem.매장명 || '';
 
-        // 괄호 안의 이름 추출 (예: "29CM(롯데본점)" -> "롯데본점")
+        // 1. Exact match
+        if (itemStoreName === currentStoreName) return true;
+
+        // 2. Handle bracket variants
         const match = itemStoreName.match(/\(([^)]+)\)/);
         if (match) {
           const nameInBracket = match[1];
-          // 괄호 안의 이름과 현재 매장명이 정확히 일치
-          return nameInBracket === currentStoreName;
+          if (nameInBracket === currentStoreName) return true;
         }
-        // 괄호가 없으면 직접 매칭 (예: "갤러리아진주" == "갤러리아진주")
+
+        // 3. Prevent Ulsan overlap
+        if (currentStoreName === '현대울산' && itemStoreName === '현대울산동구') return false;
+        if (currentStoreName === '현대울산동구' && itemStoreName === '현대울산') return false;
+
         return itemStoreName === currentStoreName;
       });
 

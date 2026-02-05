@@ -94,35 +94,6 @@ const App: React.FC = () => {
     return selectedData.growthRate || 0;
   }, [selectedData]);
 
-  // 소량단체매출액 (단체 시트 데이터)
-  const smallGroupSales = useMemo(() => {
-    if (!selectedData || !groupSalesData) return { amount: 0, percentage: 0 };
-
-    const storeName = selectedData.store.name;
-
-    // 매장명으로 매칭
-    const storeGroupData = groupSalesData.stores?.find((item: any) => {
-      const itemStoreName = item.매장명 || '';
-      return itemStoreName === storeName ||
-        itemStoreName.includes(storeName) ||
-        storeName.includes(itemStoreName);
-    });
-
-    if (!storeGroupData) {
-      return { amount: 0, percentage: 0 };
-    }
-
-    const salesAmount = storeGroupData.소량단체판매액 || 0;
-    const salesAmountInManwon = Math.round(salesAmount / 10000); // 만원 단위
-    const percentage = yearToDateRevenue > 0
-      ? (salesAmountInManwon / yearToDateRevenue) * 100
-      : 0;
-
-    return {
-      amount: salesAmountInManwon,
-      percentage: Math.round(percentage * 10) / 10 // 소수점 첫째자리까지
-    };
-  }, [selectedData, yearToDateRevenue, groupSalesData]);
 
   if (loading) {
     return (
@@ -182,11 +153,6 @@ const App: React.FC = () => {
               {monthlyAverage > 0 && (
                 <p className="text-[10px] text-slate-500 mt-1">
                   월평균 {Math.round(monthlyAverage / 100).toLocaleString()}백만원
-                </p>
-              )}
-              {smallGroupSales.amount > 0 && (
-                <p className="text-[10px] text-slate-500 mt-2 border-t border-slate-100 pt-2">
-                  소량단체매출액 {smallGroupSales.amount.toLocaleString()}만원 (비중 {smallGroupSales.percentage}%)
                 </p>
               )}
             </div>
