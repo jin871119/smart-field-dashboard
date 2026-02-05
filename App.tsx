@@ -7,6 +7,7 @@ import MonthlySalesTrend from './components/MonthlySalesTrend';
 import StoreBestItems from './components/StoreBestItems';
 import ReportPage from './components/ReportPage';
 import ComparisonInsightCard from './components/ComparisonInsightCard';
+import StoreMemo from './components/StoreMemo';
 import { convertExcelDataToStoreData } from './utils/storeDataConverter';
 import { dataService } from './services/dataService';
 
@@ -179,7 +180,9 @@ const App: React.FC = () => {
 
           {selectedData && (
             <>
-              <StoreInfoCard store={selectedData.store} />            {/* AI Comparison Insight */}
+              <StoreInfoCard store={selectedData.store} />
+              <StoreMemo storeId={selectedData.store.id} storeName={selectedData.store.name} />
+              {/* AI Comparison Insight */}
               <ComparisonInsightCard
                 targetStore={selectedData}
                 allStores={stores}
