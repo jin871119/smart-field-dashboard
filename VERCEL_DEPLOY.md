@@ -22,13 +22,7 @@
    - Output Directory: `dist`
    - Root Directory: `./`
 
-4. **환경 변수 추가**
-   - Settings → Environment Variables
-   - Name: `VITE_GEMINI_API_KEY`
-   - Value: `AIzaSyBQTegE_sDejAAy1ogTVjwQsByqoEpHoak`
-   - Environment: Production, Preview, Development 모두 선택
-
-5. **배포 시작**
+4. **배포 시작**
    - "Deploy" 버튼 클릭
 
 ### 옵션 2: Vercel CLI 사용
@@ -56,9 +50,8 @@ vercel --prod
    ```
    - 오류가 없어야 합니다
 
-2. **환경 변수 확인**
-   - `VITE_GEMINI_API_KEY`가 설정되어 있어야 합니다
-   - Vercel 대시보드에서 환경 변수를 설정해야 합니다
+2. **환경 변수**
+   - 필요 없음 (데이터는 `public/data/*.json` 정적 파일)
 
 3. **필수 파일 확인**
    - `vercel.json` ✅
@@ -85,10 +78,6 @@ vercel --prod
 npm run build
 ```
 로컬에서 먼저 테스트해보세요.
-
-**환경 변수 오류 시:**
-- Vercel 대시보드 → Project → Settings → Environment Variables
-- `VITE_GEMINI_API_KEY`가 올바르게 설정되어 있는지 확인
 
 **라우팅 오류 시:**
 - `vercel.json` 파일의 rewrites 설정 확인
