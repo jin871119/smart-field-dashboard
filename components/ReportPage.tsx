@@ -1,16 +1,5 @@
-import React, { useMemo, useState, useEffect } from 'react';
-import {
-  ResponsiveContainer,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  Legend,
-  Cell,
-  CartesianGrid
-} from 'recharts';
-import { dataService } from '../services/dataService';
+import React, { useMemo } from 'react';
+import { filterByStoreName } from '../utils/storeNameMatcher';
 import { getCompetitorSearchNames } from '../utils/competitorStoreMapping';
 
 interface ItemSeasonData {
@@ -89,17 +78,11 @@ const ReportPage: React.FC<ReportPageProps> = ({
     if (!data || !selectedStoreName) {
       return data?.data || [];
     }
-    // 매장명 매칭 (괄호 안의 이름도 고려)
-    return data.data.filter((item) => {
-      const storeName = item.매장명 || '';
-      // 괄호 안의 이름 추출
-      const match = storeName.match(/\(([^)]+)\)/);
-      if (match) {
-        const nameInBracket = match[1];
-        return nameInBracket === selectedStoreName || storeName.includes(selectedStoreName);
-      }
-      return storeName.includes(selectedStoreName) || selectedStoreName.includes(storeName);
-    });
+    return filterByStoreName(
+      data.data,
+      selectedStoreName,
+      (item: ItemSeasonData) => item.매장명 || ''
+    );
   }, [data, selectedStoreName]);
 
   if (!data || !inventoryData || !competitorData) {

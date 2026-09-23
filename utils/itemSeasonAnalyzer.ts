@@ -1,5 +1,6 @@
 import { StoreData } from '../types';
-// JSON import removed
+import { filterByStoreName } from './storeNameMatcher';
+import { sumMonthlyValues } from '../constants/dateConstants';
 
 interface ItemSeasonData {
   매장코드: string;
@@ -37,29 +38,12 @@ export const analyzeItemSeasonData = (storeName: string, itemSeasonData: any): {
 } => {
   const data = itemSeasonData;
 
-
-  // 매장명 매칭 (정확한 매칭)
-  const storeItems = data.data.filter((item: ItemSeasonData) => {
-    const itemStoreName = item.매장명 || '';
-
-    // 괄호 안의 이름 추출 (예: "29CM(롯데본점)" -> "롯데본점")
-    const match = itemStoreName.match(/\(([^)]+)\)/);
-    if (match) {
-      const nameInBracket = match[1];
-      // 괄호 안의 이름과 정확히 일치하거나 포함 관계 확인
-      return nameInBracket === storeName || storeName === nameInBracket;
-    }
-    // 괄호가 없으면 직접 매칭 (예: "갤러리아진주" == "갤러리아진주")
-    return itemStoreName === storeName;
-  });
-
-  // 디버깅: 매칭된 데이터 확인
-  if (storeItems.length === 0) {
-    console.warn(`[itemSeasonAnalyzer] 매장 "${storeName}"에 대한 데이터를 찾을 수 없습니다.`);
-    // 매칭 실패 시 빈 데이터 반환
-  } else {
-    console.log(`[itemSeasonAnalyzer] 매장 "${storeName}"에 대한 ${storeItems.length}개 데이터 발견`);
-  }
+  // 매장명 매칭
+  const storeItems = filterByStoreName(
+    data.data as ItemSeasonData[],
+    storeName,
+    (item) => item.매장명 || ''
+  );
 
   if (storeItems.length === 0) {
     return {
@@ -115,34 +99,29 @@ export const analyzeItemSeasonData = (storeName: string, itemSeasonData: any): {
   const total반품판매액 = Math.abs(storeItems.reduce((sum: number, item: ItemSeasonData) => sum + (item.반품_판매액 || 0), 0));
   const 반품률 = total정상판매액 > 0 ? (total반품판매액 / total정상판매액) * 100 : 0;
 
-  // 월별 패턴 분석 (2025년 데이터, 12월 제외)
+  // 월별 패턴 분석 (올해 데이터, 12월 제외)
+  const dataCurrentYear = new Date().getFullYear();
   const monthlySales: { [key: string]: number } = {};
-  for (let month = 1; month <= 11; month++) { // 12월 제외
-    const monthKey = `2025${String(month).padStart(2, '0')}`;
-    monthlySales[`${month}월`] = storeItems.reduce((sum: number, item: ItemSeasonData) => sum + (item[monthKey] || 0), 0);
+  for (let month = 1; month <= 11; month++) {
+    monthlySales[`${month}월`] = storeItems.reduce(
+      (sum: number, item: ItemSeasonData) => sum + sumMonthlyValues(item, dataCurrentYear, month, month), 0
+    );
   }
 
   const peakMonth = Object.entries(monthlySales)
     .filter(([_, value]) => value > 0) // 0인 월 제외
     .sort((a, b) => b[1] - a[1])[0];
 
-  // 시즌별 전년 대비 분석 (25년 1~11월 vs 24년 1~11월)
+  // 시즌별 전년 대비 분석 (올해 1~11월 vs 작년 1~11월)
+  const prevYear = dataCurrentYear - 1;
   const seasonGrowth: { [key: string]: { 올해: number; 작년: number } } = {};
   storeItems.forEach((item: ItemSeasonData) => {
     const season = item.시즌 || '기타';
     if (!seasonGrowth[season]) {
       seasonGrowth[season] = { 올해: 0, 작년: 0 };
     }
-    // 올해 데이터: 25년 1~11월 월별 데이터 합계
-    for (let month = 1; month <= 11; month++) {
-      const currentYearKey = `2025${String(month).padStart(2, '0')}`;
-      seasonGrowth[season].올해 += item[currentYearKey] || 0;
-    }
-    // 작년 데이터: 24년 1~11월 월별 데이터 합계
-    for (let month = 1; month <= 11; month++) {
-      const lastYearKey = `2024${String(month).padStart(2, '0')}`;
-      seasonGrowth[season].작년 += item[lastYearKey] || 0;
-    }
+    seasonGrowth[season].올해 += sumMonthlyValues(item, dataCurrentYear, 1, 11);
+    seasonGrowth[season].작년 += sumMonthlyValues(item, prevYear, 1, 11);
   });
 
   const seasonGrowthDetails = Object.entries(seasonGrowth)
@@ -161,23 +140,15 @@ export const analyzeItemSeasonData = (storeName: string, itemSeasonData: any): {
     ? growingSeasons.map(s => `${s.시즌}: 25년 ${s.올해}만원 vs 24년 ${s.작년}만원 = ${s.growthRate >= 0 ? '+' : ''}${s.growthRate.toFixed(1)}%`).join(' | ')
     : '성장하는 시즌 없음';
 
-  // ITEM별 전년 대비 분석 (25년 1~11월 vs 24년 1~11월)
+  // ITEM별 전년 대비 분석 (올해 1~11월 vs 작년 1~11월)
   const itemGrowth: { [key: string]: { 올해: number; 작년: number } } = {};
   storeItems.forEach((item: ItemSeasonData) => {
     const itemCode = item.ITEM || '기타';
     if (!itemGrowth[itemCode]) {
       itemGrowth[itemCode] = { 올해: 0, 작년: 0 };
     }
-    // 올해 데이터: 25년 1~11월 월별 데이터 합계
-    for (let month = 1; month <= 11; month++) {
-      const currentYearKey = `2025${String(month).padStart(2, '0')}`;
-      itemGrowth[itemCode].올해 += item[currentYearKey] || 0;
-    }
-    // 작년 데이터: 24년 1~11월 월별 데이터 합계
-    for (let month = 1; month <= 11; month++) {
-      const lastYearKey = `2024${String(month).padStart(2, '0')}`;
-      itemGrowth[itemCode].작년 += item[lastYearKey] || 0;
-    }
+    itemGrowth[itemCode].올해 += sumMonthlyValues(item, dataCurrentYear, 1, 11);
+    itemGrowth[itemCode].작년 += sumMonthlyValues(item, prevYear, 1, 11);
   });
 
   const itemGrowthDetails = Object.entries(itemGrowth)
@@ -201,25 +172,19 @@ export const analyzeItemSeasonData = (storeName: string, itemSeasonData: any): {
   const currentMonth = new Date().getMonth() + 1;
   for (let i = 2; i >= 0; i--) {
     const month = currentMonth - i;
-    if (month > 0 && month <= 11) { // 12월 제외
-      const monthKey = `2025${String(month).padStart(2, '0')}`;
-      const lastYearKey = `2024${String(month).padStart(2, '0')}`;
-      const current = storeItems.reduce((sum: number, item: ItemSeasonData) => sum + (item[monthKey] || 0), 0);
-      const lastYear = storeItems.reduce((sum: number, item: ItemSeasonData) => sum + (item[lastYearKey] || 0), 0);
+    if (month > 0 && month <= 11) {
+      const current = storeItems.reduce((sum: number, item: ItemSeasonData) => sum + sumMonthlyValues(item, dataCurrentYear, month, month), 0);
+      const lastYear = storeItems.reduce((sum: number, item: ItemSeasonData) => sum + sumMonthlyValues(item, prevYear, month, month), 0);
       const growth = lastYear > 0 ? ((current - lastYear) / lastYear) * 100 : 0;
       recentMonths.push({ month: `${month}월`, current: Math.round(current / 10000), lastYear: Math.round(lastYear / 10000), growth });
     }
   }
 
-  // 전체 신장률 계산 (25년 1~11월 vs 24년 1~11월)
+  // 전체 신장률 계산 (올해 1~11월 vs 작년 1~11월)
   let total올해 = 0;
   let total작년 = 0;
-  for (let month = 1; month <= 11; month++) {
-    const currentYearKey = `2025${String(month).padStart(2, '0')}`;
-    const lastYearKey = `2024${String(month).padStart(2, '0')}`;
-    total올해 += storeItems.reduce((sum: number, item: ItemSeasonData) => sum + (item[currentYearKey] || 0), 0);
-    total작년 += storeItems.reduce((sum: number, item: ItemSeasonData) => sum + (item[lastYearKey] || 0), 0);
-  }
+  total올해 = storeItems.reduce((sum: number, item: ItemSeasonData) => sum + sumMonthlyValues(item, dataCurrentYear, 1, 11), 0);
+  total작년 = storeItems.reduce((sum: number, item: ItemSeasonData) => sum + sumMonthlyValues(item, prevYear, 1, 11), 0);
   const 전체신장률 = total작년 > 0 ? ((total올해 - total작년) / total작년) * 100 : 0;
 
   return {

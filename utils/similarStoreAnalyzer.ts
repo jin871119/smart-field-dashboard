@@ -1,5 +1,5 @@
 import { StoreData } from '../types';
-// Imports removed
+import { filterByStoreName } from './storeNameMatcher';
 
 interface ItemSeasonData {
   매장코드: string;
@@ -30,14 +30,7 @@ const getLatestMonthRevenue = (storeName: string, itemSeasonData: any): number =
 
   if (!latestMonth) return 0;
 
-  const storeItems = data.data.filter((item: ItemSeasonData) => {
-    const itemStoreName = item.매장명 || '';
-    const match = itemStoreName.match(/\(([^)]+)\)/);
-    if (match) {
-      return match[1] === storeName;
-    }
-    return itemStoreName === storeName;
-  });
+  const storeItems = filterByStoreName(data.data as ItemSeasonData[], storeName, item => item.매장명 || '');
 
   // Latest month 판매액 합계
   let totalRevenue = 0;
@@ -107,14 +100,7 @@ export const getStoreItemSales = (storeName: string, itemSeasonData: any): { [it
 
   if (!latestMonth) return {};
 
-  const storeItems = data.data.filter((item: ItemSeasonData) => {
-    const itemStoreName = item.매장명 || '';
-    const match = itemStoreName.match(/\(([^)]+)\)/);
-    if (match) {
-      return match[1] === storeName;
-    }
-    return itemStoreName === storeName;
-  });
+  const storeItems = filterByStoreName(data.data as ItemSeasonData[], storeName, item => item.매장명 || '');
 
   // ITEM별 최신 월 판매액 집계
   const itemMap: { [key: string]: number } = {};
@@ -141,14 +127,7 @@ export const getStoreSeasonSales = (storeName: string, itemSeasonData: any): { [
 
   if (!latestMonth) return {};
 
-  const storeItems = data.data.filter((item: ItemSeasonData) => {
-    const itemStoreName = item.매장명 || '';
-    const match = itemStoreName.match(/\(([^)]+)\)/);
-    if (match) {
-      return match[1] === storeName;
-    }
-    return itemStoreName === storeName;
-  });
+  const storeItems = filterByStoreName(data.data as ItemSeasonData[], storeName, item => item.매장명 || '');
 
   // 시즌별 최신 월 판매액 집계
   const seasonSales: { [season: string]: number } = {};
@@ -191,14 +170,7 @@ export const getStoreInventory = (storeName: string, inventoryData: any): {
     return { 총재고수량: 0, 총재고택가: 0, 시즌별재고: {} };
   }
 
-  const storeInventories = data.data.filter((item: StoreInventoryData) => {
-    const itemStoreName = item.매장명 || '';
-    const match = itemStoreName.match(/\(([^)]+)\)/);
-    if (match) {
-      return match[1] === storeName;
-    }
-    return itemStoreName === storeName;
-  });
+  const storeInventories = filterByStoreName(data.data as StoreInventoryData[], storeName, item => item.매장명 || '');
 
   const 총재고수량 = storeInventories.reduce((sum: number, item: StoreInventoryData) =>
     sum + (item.매장재고수량 || 0), 0);

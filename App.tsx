@@ -6,13 +6,16 @@ import StoreInfoCard from './components/StoreInfoCard';
 import MonthlySalesTrend from './components/MonthlySalesTrend';
 import StoreBestItems from './components/StoreBestItems';
 import ReportPage from './components/ReportPage';
-import ComparisonInsightCard from './components/ComparisonInsightCard';
+
 import StoreMemo from './components/StoreMemo';
+import MonthlyKPICards from './components/MonthlyKPICards';
+import InventoryAnalysis from './components/InventoryAnalysis';
+import StoreComparison from './components/StoreComparison';
 import { convertExcelDataToStoreData } from './utils/storeDataConverter';
 import { dataService } from './services/dataService';
 
 const App: React.FC = () => {
-  const [currentPage, setCurrentPage] = useState<'home' | 'report'>('home');
+  const [currentPage, setCurrentPage] = useState<'home' | 'report' | 'analysis'>('home');
 
   const [storeData, setStoreData] = useState<any>(null);
   const [performanceData, setPerformanceData] = useState<any>(null);
@@ -60,6 +63,7 @@ const App: React.FC = () => {
   }, [storeData, performanceData, itemSeasonData]);
 
   const [selectedStoreId, setSelectedStoreId] = useState<string>('');
+  const [selectedMonth, setSelectedMonth] = useState<string>('누계');
 
   // stores가 로드되면 첫 번째 매장 선택
   useEffect(() => {
@@ -73,27 +77,43 @@ const App: React.FC = () => {
     return stores.find(s => s.store.id === selectedStoreId) || stores[0];
   }, [selectedStoreId, stores]);
 
-  // 연누계 (1~12월)
-  const yearToDateRevenue = useMemo(() => {
-    if (!selectedData) return 0;
-    return selectedData.yearToDateRevenue || 0;
+  // 실적이 있는 월 목록
+  const availableMonths = useMemo(() => {
+    if (!selectedData?.monthlyPerformance) return [];
+    return selectedData.monthlyPerformance
+      .filter(m => m.revenue > 0)
+      .map(m => m.month);
   }, [selectedData]);
 
-  // 월평균 (1~12월)
-  const monthlyAverage = useMemo(() => {
-    if (!selectedData || !selectedData.monthlyPerformance) return 0;
-    const totalRevenue = selectedData.yearToDateRevenue || 0;
-    // 실적이 있는 개월 수 기준으로 평균 계산
-    const activeMonths = selectedData.activeMonths || 1;
-    return Math.round(totalRevenue / activeMonths);
-  }, [selectedData]);
+  // 선택 월에 따른 매출/신장률 계산
+  const { displayRevenue, displayGrowthRate, displayLabel, displaySubtext } = useMemo(() => {
+    if (!selectedData?.monthlyPerformance) {
+      return { displayRevenue: 0, displayGrowthRate: 0, displayLabel: '누계', displaySubtext: '' };
+    }
 
-  // 전년 대비 신장률 (연매출 데이터 기반)
-  const growthRate = useMemo(() => {
-    if (!selectedData) return 0;
-    // performance_data.json에서 계산한 신장률 사용
-    return selectedData.growthRate || 0;
-  }, [selectedData]);
+    if (selectedMonth === '누계') {
+      const rev = selectedData.yearToDateRevenue || 0;
+      const activeMonths = selectedData.activeMonths || 1;
+      const avg = Math.round(rev / activeMonths);
+      return {
+        displayRevenue: rev,
+        displayGrowthRate: selectedData.growthRate || 0,
+        displayLabel: `${activeMonths}개월 누계`,
+        displaySubtext: `월평균 ${Math.round(avg / 100).toLocaleString()}백만원`,
+      };
+    }
+
+    const monthData = selectedData.monthlyPerformance.find(m => m.month === selectedMonth);
+    if (!monthData) {
+      return { displayRevenue: 0, displayGrowthRate: 0, displayLabel: selectedMonth, displaySubtext: '' };
+    }
+    return {
+      displayRevenue: monthData.revenue,
+      displayGrowthRate: monthData.growthRate || 0,
+      displayLabel: selectedMonth,
+      displaySubtext: `전년 동월 ${monthData.target > 0 ? Math.round(monthData.target / 100).toLocaleString() + '백만원' : '-'}`,
+    };
+  }, [selectedData, selectedMonth]);
 
 
   if (loading) {
@@ -129,7 +149,7 @@ const App: React.FC = () => {
 
   return (
     <Layout
-      title={currentPage === 'home' ? 'Field Insight' : '리포트'}
+      title={currentPage === 'home' ? 'Field Insight' : currentPage === 'report' ? '리포트' : '분석'}
       currentPage={currentPage}
       onPageChange={setCurrentPage}
     >
@@ -141,30 +161,45 @@ const App: React.FC = () => {
             onSelect={setSelectedStoreId}
           />
 
+          {/* 월 필터 */}
+          <div className="flex gap-1.5 mb-4 overflow-x-auto pb-1 scrollbar-hide">
+            {['누계', ...availableMonths].map((m) => (
+              <button
+                key={m}
+                onClick={() => setSelectedMonth(m)}
+                className={`px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all ${
+                  selectedMonth === m
+                    ? 'bg-blue-600 text-white shadow-sm'
+                    : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+                }`}
+              >
+                {m}
+              </button>
+            ))}
+          </div>
+
           {/* Quick Summary Widgets */}
           <div className="grid grid-cols-2 gap-4 mb-6">
             <div className="bg-white p-4 rounded-3xl border border-slate-100 shadow-sm">
               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
-                연매출 ({selectedData.activeMonths}개월 누계)
+                {selectedMonth === '누계' ? '매출' : selectedMonth + ' 매출'} ({displayLabel})
               </p>
               <div className="flex items-baseline gap-1 mb-2">
-                <span className="text-xl font-bold text-slate-900">{Math.round(yearToDateRevenue / 100).toLocaleString()}</span>
+                <span className="text-xl font-bold text-slate-900">{displayRevenue > 0 ? Math.round(displayRevenue / 100).toLocaleString() : '-'}</span>
                 <span className="text-[10px] font-medium text-slate-400">백만 원</span>
               </div>
-              {monthlyAverage > 0 && (
-                <p className="text-[10px] text-slate-500 mt-1">
-                  월평균 {Math.round(monthlyAverage / 100).toLocaleString()}백만원
-                </p>
+              {displaySubtext && (
+                <p className="text-[10px] text-slate-500 mt-1">{displaySubtext}</p>
               )}
             </div>
             <div className="bg-white p-4 rounded-3xl border border-slate-100 shadow-sm">
               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">전년 대비 신장률</p>
               <div className="flex items-baseline gap-2">
-                <span className={`text-xl font-bold ${growthRate >= 0 ? 'text-blue-600' : 'text-red-500'}`}>
-                  {growthRate >= 0 ? '+' : ''}{growthRate}%
+                <span className={`text-xl font-bold ${displayGrowthRate >= 0 ? 'text-blue-600' : 'text-red-500'}`}>
+                  {displayGrowthRate >= 0 ? '+' : ''}{displayGrowthRate.toFixed(1)}%
                 </span>
-                <div className={`flex items-center text-[10px] font-bold ${growthRate >= 0 ? 'text-green-500' : 'text-red-400'}`}>
-                  {growthRate >= 0 ? (
+                <div className={`flex items-center text-[10px] font-bold ${displayGrowthRate >= 0 ? 'text-green-500' : 'text-red-400'}`}>
+                  {displayGrowthRate >= 0 ? (
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
                       <path fillRule="evenodd" d="M12 7a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0V8.414l-4.293 4.293a1 1 0 01-1.414 0L8 10.414l-4.293 4.293a1 1 0 01-1.414-1.414l5-5a1 1 0 011.414 0L11 10.586 14.586 7H12z" clipRule="evenodd" />
                     </svg>
@@ -182,20 +217,19 @@ const App: React.FC = () => {
             <>
               <StoreInfoCard store={selectedData.store} />
               <StoreMemo storeId={selectedData.store.id} storeName={selectedData.store.name} />
-              {/* AI Comparison Insight */}
-              <ComparisonInsightCard
-                targetStore={selectedData}
-                allStores={stores}
-                itemSeasonData={itemSeasonData}
-                inventoryData={inventoryData}
-                competitorData={competitorData}
-                storeStyleSalesData={storeStyleSalesData}
-              />
               <MonthlySalesTrend monthlyPerformance={selectedData.monthlyPerformance} />
 
               <StoreBestItems
                 selectedStoreName={selectedData.store.name}
                 data={storeStyleSalesData}
+              />
+
+              <InventoryAnalysis
+                selectedStoreName={selectedData.store.name}
+                inventoryData={inventoryData}
+                monthlyAvgSales={selectedData.activeMonths && selectedData.yearToDateRevenue
+                  ? (selectedData.yearToDateRevenue / selectedData.activeMonths) * 10000
+                  : 0}
               />
             </>
           )}
@@ -207,12 +241,19 @@ const App: React.FC = () => {
             </svg>
           </button>
         </>
-      ) : (
+      ) : currentPage === 'report' ? (
         <ReportPage
           selectedStoreName={selectedData?.store.name || ''}
           data={itemSeasonData}
           inventoryData={inventoryData}
           competitorData={competitorData}
+          currentYear={selectedData?.currentYear || 2026}
+        />
+      ) : (
+        <StoreComparison
+          stores={stores}
+          itemSeasonData={itemSeasonData}
+          inventoryData={inventoryData}
           currentYear={selectedData?.currentYear || 2026}
         />
       )}

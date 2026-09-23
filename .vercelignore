@@ -5,3 +5,13 @@ read_*.py
 search_*.py
 backdata.xlsx
 ~$*.xlsx
+
+# 테스트 및 민감 파일
+test_*.mjs
+*.p8
+*.pub
+.env.local
+
+# Snowflake 직접 조회 API 는 쓰지 않는다 (데이터는 KG → public/data)
+api/
+scripts/

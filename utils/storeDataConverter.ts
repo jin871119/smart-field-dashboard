@@ -1,6 +1,6 @@
 import { StoreData, Store, Manager, MonthlyPerformance, ItemPerformance } from '../types';
 import { processPerformanceData } from './performanceConverter';
-// Import removed
+import { filterByStoreName } from './storeNameMatcher';
 
 // JSON 파일을 동적으로 import하기 위한 타입
 interface ExcelStoreData {
@@ -112,25 +112,11 @@ export const convertExcelDataToStoreData = (
 
       const currentStoreName = item.매장명; // 현재 처리 중인 매장명 (예: "롯데본점")
 
-      const storeItems = seasonData.data.filter((seasonItem: any) => {
-        const itemStoreName = seasonItem.매장명 || '';
-
-        // 1. Exact match
-        if (itemStoreName === currentStoreName) return true;
-
-        // 2. Handle bracket variants
-        const match = itemStoreName.match(/\(([^)]+)\)/);
-        if (match) {
-          const nameInBracket = match[1];
-          if (nameInBracket === currentStoreName) return true;
-        }
-
-        // 3. Prevent Ulsan overlap
-        if (currentStoreName === '현대울산' && itemStoreName === '현대울산동구') return false;
-        if (currentStoreName === '현대울산동구' && itemStoreName === '현대울산') return false;
-
-        return itemStoreName === currentStoreName;
-      });
+      const storeItems = filterByStoreName(
+        seasonData.data,
+        currentStoreName,
+        (seasonItem: any) => seasonItem.매장명 || ''
+      );
 
       if (storeItems.length === 0) {
         // 데이터가 없으면 빈 배열 반환

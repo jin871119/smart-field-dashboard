@@ -15,6 +15,9 @@ dist-ssr
 # Vercel
 .vercel
 
+# Snowflake RSA 키 (절대 커밋 금지)
+*.p8
+*.pub
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
@@ -25,3 +28,5 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+.vercel

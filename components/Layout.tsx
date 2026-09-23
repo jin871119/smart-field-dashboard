@@ -4,8 +4,8 @@ import React from 'react';
 interface LayoutProps {
   children: React.ReactNode;
   title: string;
-  currentPage?: 'home' | 'report';
-  onPageChange?: (page: 'home' | 'report') => void;
+  currentPage?: 'home' | 'report' | 'analysis';
+  onPageChange?: (page: 'home' | 'report' | 'analysis') => void;
 }
 
 const Layout: React.FC<LayoutProps> = ({ children, title, currentPage = 'home', onPageChange }) => {
@@ -14,7 +14,7 @@ const Layout: React.FC<LayoutProps> = ({ children, title, currentPage = 'home', 
       {/* Header */}
       <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-slate-200 px-5 py-4 flex items-center justify-between">
         <h1 className="text-xl font-bold text-slate-900 tracking-tight">{title}</h1>
-        <div className="flex space-edge-3">
+        <div className="flex space-x-3">
             <button className="p-2 text-slate-500 hover:text-blue-600 transition-colors">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
@@ -41,11 +41,17 @@ const Layout: React.FC<LayoutProps> = ({ children, title, currentPage = 'home', 
           label="홈"
           onClick={() => onPageChange?.('home')}
         />
-        <NavItem 
-          active={currentPage === 'report'} 
-          icon="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" 
+        <NavItem
+          active={currentPage === 'report'}
+          icon="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
           label="리포트"
           onClick={() => onPageChange?.('report')}
+        />
+        <NavItem
+          active={currentPage === 'analysis'}
+          icon="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"
+          label="분석"
+          onClick={() => onPageChange?.('analysis')}
         />
       </nav>
     </div>

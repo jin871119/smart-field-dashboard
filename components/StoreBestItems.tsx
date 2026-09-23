@@ -1,5 +1,5 @@
-import React, { useMemo, useState, useEffect } from 'react';
-import { dataService } from '../services/dataService';
+import React, { useMemo } from 'react';
+import { filterByStoreName } from '../utils/storeNameMatcher';
 
 interface StoreStyleSalesData {
   매장코드: string;
@@ -15,7 +15,16 @@ interface StoreStyleSalesDataJson {
   headers: string[];
   data: StoreStyleSalesData[];
   total_rows: number;
+  period?: string; // 'YYYY-MM-DD~YYYY-MM-DD'
 }
+
+// '2026-09-01~2026-09-20' → '9/1~9/20 기준'
+const formatPeriod = (period?: string): string => {
+  const m = period?.match(/^\d{4}-(\d{2})-(\d{2})~\d{4}-(\d{2})-(\d{2})$/);
+  if (!m) return '';
+  const [, m1, d1, m2, d2] = m.map(Number);
+  return `${m1}/${d1}~${m2}/${d2} 기준`;
+};
 
 interface StoreBestItemsProps {
   selectedStoreName: string;
@@ -32,25 +41,11 @@ const StoreBestItems: React.FC<StoreBestItemsProps> = ({ selectedStoreName, data
       return [];
     }
 
-    const storeItems = data.data.filter((item: StoreStyleSalesData) => {
-      const itemStoreName = item.매장명 || '';
-
-      // 1. Exact match
-      if (itemStoreName === selectedStoreName) return true;
-
-      // 2. Handle bracket variants like "29CM(롯데본점)"
-      const match = itemStoreName.match(/\(([^)]+)\)/);
-      if (match) {
-        const nameInBracket = match[1];
-        if (nameInBracket === selectedStoreName) return true;
-      }
-
-      // 3. Fallback for known sub-store cases, but avoid '현대울산' matching '현대울산동구'
-      if (selectedStoreName === '현대울산' && itemStoreName === '현대울산동구') return false;
-      if (selectedStoreName === '현대울산동구' && itemStoreName === '현대울산') return false;
-
-      return itemStoreName === selectedStoreName;
-    });
+    const storeItems = filterByStoreName(
+      data.data,
+      selectedStoreName,
+      (item: StoreStyleSalesData) => item.매장명 || ''
+    );
 
     if (storeItems.length === 0) {
       return [];
@@ -86,12 +81,14 @@ const StoreBestItems: React.FC<StoreBestItemsProps> = ({ selectedStoreName, data
       }));
   }, [data, selectedStoreName]);
 
+  const periodLabel = formatPeriod(data?.period);
+
   if (bestItems.length === 0) {
     return (
       <div className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100 mb-6">
         <h3 className="text-sm font-bold text-slate-900 mb-4 flex items-center gap-2">
           <div className="w-1.5 h-4 bg-purple-500 rounded-full"></div>
-          매장별 BEST 5 아이템 <span className="text-xs text-slate-500 font-normal">(1월 기준)</span>
+          매장별 BEST 5 아이템 {periodLabel && <span className="text-xs text-slate-500 font-normal">({periodLabel})</span>}
         </h3>
         <p className="text-xs text-slate-500 text-center py-8">데이터가 없습니다.</p>
       </div>
@@ -102,7 +99,7 @@ const StoreBestItems: React.FC<StoreBestItemsProps> = ({ selectedStoreName, data
     <div className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100 mb-6">
       <h3 className="text-sm font-bold text-slate-900 mb-4 flex items-center gap-2">
         <div className="w-1.5 h-4 bg-purple-500 rounded-full"></div>
-        매장별 BEST 5 아이템 <span className="text-xs text-slate-500 font-normal">(1월 기준)</span>
+        매장별 BEST 5 아이템 {periodLabel && <span className="text-xs text-slate-500 font-normal">({periodLabel})</span>}
       </h3>
 
       {/* 테이블 헤더 */}
@@ -147,7 +144,7 @@ const StoreBestItems: React.FC<StoreBestItemsProps> = ({ selectedStoreName, data
             </div>
             <div className="flex items-center justify-end">
               <span className="text-sm font-bold text-slate-900">
-                {Math.round(item.판매금액 / 10000).toLocaleString()}만원
+                {item.판매금액.toLocaleString()}만원
               </span>
             </div>
           </div>

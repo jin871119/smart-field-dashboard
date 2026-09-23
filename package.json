@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:full": "vercel dev --port 3000",
     "build": "vite build",
     "preview": "vite preview"
   },
@@ -12,7 +13,8 @@
     "@google/generative-ai": "^0.24.1",
     "react": "^19.2.3",
     "react-dom": "^19.2.3",
-    "recharts": "^3.6.0"
+    "recharts": "^3.6.0",
+    "snowflake-sdk": "^2.3.4"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",

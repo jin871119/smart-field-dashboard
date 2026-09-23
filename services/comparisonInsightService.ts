@@ -1,9 +1,7 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
 import { StoreData } from "../types";
 import { collectComparisonData, getTop3SeasonsBySales } from "../utils/similarStoreAnalyzer";
 import { getCompetitorSearchNames } from "../utils/competitorStoreMapping";
-import { analyzeItemSeasonData } from "../utils/itemSeasonAnalyzer";
-import { dataService } from "./dataService";
+import { callGeminiWithFallback, getGeminiApiKey } from "./geminiModelManager";
 
 interface ComparisonData {
   targetItemSales: { [item: string]: number };
@@ -27,8 +25,7 @@ export const getComparisonInsights = async (
   storeStyleSalesDataJson: any,
   itemSeasonDataJson: any
 ): Promise<string> => {
-  // Vite에서는 클라이언트 사이드에서 import.meta.env를 사용해야 함
-  const apiKey = (import.meta as any).env.VITE_GEMINI_API_KEY || (import.meta as any).env.GEMINI_API_KEY || '';
+  const apiKey = getGeminiApiKey();
 
   if (!apiKey) {
     console.warn('API key not found, using local AI analysis');
@@ -40,14 +37,9 @@ export const getComparisonInsights = async (
     );
   }
 
-  const genAI = new GoogleGenerativeAI(apiKey);
-
   // The original `similarStores` parameter is now `allStores` in the signature.
   // `collectComparisonData` expects `similarStores`, so we use `allStores` here.
   const comparisonData = collectComparisonData(targetStore, similarStores, storeInventoryDataJson, itemSeasonDataJson);
-
-  // 아이템시즌별판매 데이터 분석
-  const itemSeasonAnalysis = analyzeItemSeasonData(targetStore.store.name, itemSeasonDataJson);
 
   // 타겟 매장의 1월 매출 계산
   const targetJanuaryRevenue = comparisonData.similarStoresData.find(s => s.storeName === targetStore.store.name)?.revenue ||
@@ -367,32 +359,8 @@ ${rankingComparison ? `- 유사 매장 대비: ${rankingComparison.mlb순위평�
 `;
 
   try {
-    const genAI = new GoogleGenerativeAI(apiKey);
-    const models = ['gemini-1.5-flash', 'gemini-1.5-pro'];
-
-    for (const modelName of models) {
-      try {
-        const model = genAI.getGenerativeModel({
-          model: modelName,
-          generationConfig: {
-            temperature: 0.8,
-            topK: 40,
-            topP: 0.95,
-            maxOutputTokens: 2048,
-          }
-        });
-        const result = await model.generateContent(finalPrompt);
-        const response = await result.response;
-        const text = response.text();
-
-        if (text) {
-          return text;
-        }
-      } catch (error: any) {
-        console.warn(`Model ${modelName} error:`, error);
-        continue;
-      }
-    }
+    const result = await callGeminiWithFallback(finalPrompt, apiKey);
+    if (result) return result;
 
     return generateLocalComparisonInsight(targetStore, similarStores, storeInventoryDataJson, itemSeasonDataJson);
   } catch (error: any) {

@@ -1,4 +1,5 @@
 import { MonthlyPerformance } from '../types';
+import { matchStoreName } from './storeNameMatcher';
 
 interface PerformanceData {
   매장코드: string;
@@ -12,27 +13,6 @@ interface PerformanceDataJson {
   data: PerformanceData[];
   total_rows: number;
 }
-
-// 매장명 매칭 함수 (매장정보의 매장명과 실적 데이터의 매장명 매칭)
-const matchStoreName = (storeName: string, performanceStoreName: string): boolean => {
-  // 1. Exact match
-  if (storeName === performanceStoreName) return true;
-
-  // 2. Handle bracket variants like "29CM(롯데본점)"
-  const match = performanceStoreName.match(/\(([^)]+)\)/);
-  if (match) {
-    const nameInBracket = match[1];
-    if (nameInBracket === storeName) return true;
-  }
-
-  // 3. Fallback for known sub-store cases, but avoid '현대울산' matching '현대울산동구'
-  // If performanceStoreName is longer than storeName, it might be a sub-store or tagged name
-  // but we should avoid generic '현대울산' taking '현대울산동구' data.
-  if (storeName === '현대울산' && performanceStoreName === '현대울산동구') return false;
-  if (storeName === '현대울산동구' && performanceStoreName === '현대울산') return false;
-
-  return performanceStoreName === storeName;
-};
 
 // 판매시점(YYYYMM)을 월 문자열로 변환
 const formatMonth = (salesPoint: string): string => {
@@ -72,7 +52,7 @@ export const processPerformanceData = (
 
   // 해당 매장의 데이터만 필터링
   const storeData = performanceDataJson.data.filter(item =>
-    matchStoreName(storeName, item.매장명)
+    matchStoreName(storeName, item.매장명 || '')
   );
 
   // 월별 데이터 정리 (올해와 작년)
