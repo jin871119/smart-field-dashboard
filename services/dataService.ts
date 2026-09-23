@@ -12,6 +12,7 @@ export interface DataService {
   getItemSeasonData: () => Promise<any>;
   getStoreInventoryData: () => Promise<any>;
   getCompetitorData: () => Promise<any>;
+  getCompetitorData2026: () => Promise<any>;
   getStoreStyleSalesData: () => Promise<any>;
 }
 
@@ -39,6 +40,10 @@ export const dataService: DataService = {
 
   getCompetitorData: () =>
     fetchJson('/data/competitor_data_v2.json'),
+
+  // 2026년 1~8월 마감 기준 점포별 브랜드 월평균 (KG get_kr_sales_competitors)
+  getCompetitorData2026: () =>
+    fetchJson('/data/competitor_data_2026.json'),
 
   getStoreStyleSalesData: () =>
     fetchJson('/data/store_style_sales_data.json'),

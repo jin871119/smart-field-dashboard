@@ -23,6 +23,7 @@ const App: React.FC = () => {
   const [itemSeasonData, setItemSeasonData] = useState<any>(null);
   const [inventoryData, setInventoryData] = useState<any>(null);
   const [competitorData, setCompetitorData] = useState<any>(null);
+  const [competitorData2026, setCompetitorData2026] = useState<any>(null);
   const [storeStyleSalesData, setStoreStyleSalesData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -30,13 +31,14 @@ const App: React.FC = () => {
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [sData, pData, gData, iData, invData, cData, ssData] = await Promise.all([
+        const [sData, pData, gData, iData, invData, cData, c26Data, ssData] = await Promise.all([
           dataService.getStoreData(),
           dataService.getPerformanceData(),
           dataService.getGroupSalesData(),
           dataService.getItemSeasonData(),
           dataService.getStoreInventoryData(),
           dataService.getCompetitorData(),
+          dataService.getCompetitorData2026().catch(() => null),
           dataService.getStoreStyleSalesData()
         ]);
         setStoreData(sData);
@@ -45,6 +47,7 @@ const App: React.FC = () => {
         setItemSeasonData(iData);
         setInventoryData(invData);
         setCompetitorData(cData);
+        setCompetitorData2026(c26Data);
         setStoreStyleSalesData(ssData);
       } catch (err) {
         console.error("Failed to load initial data", err);
@@ -217,7 +220,7 @@ const App: React.FC = () => {
             <>
               <StoreInfoCard store={selectedData.store} />
               <StoreMemo storeId={selectedData.store.id} storeName={selectedData.store.name} />
-              <MonthlySalesTrend monthlyPerformance={selectedData.monthlyPerformance} />
+              <MonthlySalesTrend monthlyPerformance={selectedData.monthlyPerformance} currentYear={selectedData.currentYear} />
 
               <StoreBestItems
                 selectedStoreName={selectedData.store.name}
@@ -247,6 +250,7 @@ const App: React.FC = () => {
           data={itemSeasonData}
           inventoryData={inventoryData}
           competitorData={competitorData}
+          competitorData2026={competitorData2026}
           currentYear={selectedData?.currentYear || 2026}
         />
       ) : (

@@ -63,6 +63,7 @@ interface ReportPageProps {
   data: ItemSeasonDataJson | null;
   inventoryData: StoreInventoryDataJson | null;
   competitorData: CompetitorDataV2Json | null;
+  competitorData2026?: CompetitorDataV2Json | null;
   currentYear?: number;
 }
 
@@ -71,6 +72,7 @@ const ReportPage: React.FC<ReportPageProps> = ({
   data,
   inventoryData,
   competitorData,
+  competitorData2026,
   currentYear = 2026
 }) => {
   // 선택한 매장의 데이터만 필터링
@@ -143,72 +145,16 @@ const ReportPage: React.FC<ReportPageProps> = ({
   }, [competitorData]);
 
 
-  const CustomTooltip = ({ active, payload, label }: any) => {
-    if (active && payload && payload.length) {
-      const 올해값 = payload.find((p: any) => p.dataKey === '올해')?.value || 0;
-      const 작년값 = payload.find((p: any) => p.dataKey === '작년')?.value || 0;
-      const 성장률 = 작년값 > 0 ? ((올해값 - 작년값) / 작년값 * 100).toFixed(1) : '0';
-
-      return (
-        <div className="bg-white p-4 rounded-xl shadow-lg border border-slate-200 text-xs min-w-[180px]">
-          <p className="font-bold text-slate-900 mb-3 text-sm border-b border-slate-100 pb-2">{label}</p>
-          <div className="space-y-2">
-            {payload.map((entry: any, index: number) => (
-              <div key={index} className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-2">
-                  <div
-                    className="w-3 h-3 rounded"
-                    style={{ backgroundColor: entry.color }}
-                  ></div>
-                  <span className="text-slate-600">{entry.name.split('(')[0].trim()}</span>
-                </div>
-                <span className="font-bold text-slate-900">{entry.value.toLocaleString()}만원</span>
-              </div>
-            ))}
-            {올해값 > 0 && 작년값 > 0 && (
-              <div className="pt-2 mt-2 border-t border-slate-100">
-                <div className="flex items-center justify-between">
-                  <span className="text-slate-600">전년 대비</span>
-                  <span className={`font-bold ${parseFloat(성장률) >= 0 ? 'text-blue-600' : 'text-red-500'}`}>
-                    {parseFloat(성장률) >= 0 ? '+' : ''}{성장률}%
-                  </span>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      );
-    }
-    return null;
-  };
-
-  return (
-    <div className="space-y-6">
-      {/* 선택된 매장 표시 */}
-      {selectedStoreName && (
-        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-3xl p-4 border border-blue-100">
-          <div className="flex items-center gap-2">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-            </svg>
-            <div>
-              <p className="text-xs text-blue-600 font-semibold">선택된 매장</p>
-              <p className="text-sm font-bold text-slate-900">{selectedStoreName}</p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* 점포별 브랜드 순위표 - 항상 표시 */}
-      {(() => {
-        const stores = competitorData?.stores || [];
+  // 점포별 브랜드 순위표 (기간별 경쟁사 데이터를 같은 형식으로 렌더링)
+  const renderBrandRanking = (source: CompetitorDataV2Json | null, title: string) => {
+        const stores = source?.stores || [];
 
         if (stores.length === 0) {
           return (
             <div className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100">
               <h3 className="text-sm font-bold text-slate-900 mb-4 flex items-center gap-2">
                 <div className="w-1.5 h-4 bg-purple-500 rounded-full"></div>
-                점포별 브랜드 순위 (월평균 1~12월 기준)
+                {title}
               </h3>
               <p className="text-xs text-slate-500 text-center py-8">
                 경쟁사 데이터가 없습니다. backdata 경쟁사 시트 확인 후 read_competitor_v2_fixed.py를 실행해주세요.
@@ -238,7 +184,7 @@ const ReportPage: React.FC<ReportPageProps> = ({
           <div className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100">
             <h3 className="text-sm font-bold text-slate-900 mb-4 flex items-center gap-2">
               <div className="w-1.5 h-4 bg-purple-500 rounded-full"></div>
-              점포별 브랜드 순위 (월평균 1~12월 기준)
+              {title}
               {selectedStoreName && filteredStores.length > 0 && (
                 <span className="text-xs text-slate-500 font-normal ml-2">
                   ({selectedStoreName} 매장)
@@ -367,7 +313,67 @@ const ReportPage: React.FC<ReportPageProps> = ({
             </div>
           </div>
         );
-      })()}
+  };
+
+  const CustomTooltip = ({ active, payload, label }: any) => {
+    if (active && payload && payload.length) {
+      const 올해값 = payload.find((p: any) => p.dataKey === '올해')?.value || 0;
+      const 작년값 = payload.find((p: any) => p.dataKey === '작년')?.value || 0;
+      const 성장률 = 작년값 > 0 ? ((올해값 - 작년값) / 작년값 * 100).toFixed(1) : '0';
+
+      return (
+        <div className="bg-white p-4 rounded-xl shadow-lg border border-slate-200 text-xs min-w-[180px]">
+          <p className="font-bold text-slate-900 mb-3 text-sm border-b border-slate-100 pb-2">{label}</p>
+          <div className="space-y-2">
+            {payload.map((entry: any, index: number) => (
+              <div key={index} className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <div
+                    className="w-3 h-3 rounded"
+                    style={{ backgroundColor: entry.color }}
+                  ></div>
+                  <span className="text-slate-600">{entry.name.split('(')[0].trim()}</span>
+                </div>
+                <span className="font-bold text-slate-900">{entry.value.toLocaleString()}만원</span>
+              </div>
+            ))}
+            {올해값 > 0 && 작년값 > 0 && (
+              <div className="pt-2 mt-2 border-t border-slate-100">
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-600">전년 대비</span>
+                  <span className={`font-bold ${parseFloat(성장률) >= 0 ? 'text-blue-600' : 'text-red-500'}`}>
+                    {parseFloat(성장률) >= 0 ? '+' : ''}{성장률}%
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+    return null;
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* 선택된 매장 표시 */}
+      {selectedStoreName && (
+        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-3xl p-4 border border-blue-100">
+          <div className="flex items-center gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+            </svg>
+            <div>
+              <p className="text-xs text-blue-600 font-semibold">선택된 매장</p>
+              <p className="text-sm font-bold text-slate-900">{selectedStoreName}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 점포별 브랜드 순위표 - 최신 기간 먼저 */}
+      {competitorData2026 && renderBrandRanking(competitorData2026, '점포별 브랜드 순위 (월평균 2026년 1~8월 마감 기준)')}
+      {renderBrandRanking(competitorData, '점포별 브랜드 순위 (월평균 1~12월 기준)')}
 
 
     </div>
